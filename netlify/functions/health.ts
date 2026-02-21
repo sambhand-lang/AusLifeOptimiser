@@ -1,12 +1,18 @@
 import { Handler } from '@netlify/functions';
-import sqlite3 from 'sqlite3';
 import path from 'path';
+import fs from 'fs';
 
-const getDbPath = () => {
-  const bundled = path.join(__dirname, './suburbs.db');
-  const fallback = path.join(__dirname, '../../backend/suburbs.db');
-  if (fs.existsSync(bundled)) return bundled;
-  return fallback;
+const loadJson = (name: string) => {
+  const p = path.join(__dirname, `${name}.json`);
+  if (fs.existsSync(p)) {
+    try {
+      return JSON.parse(fs.readFileSync(p, 'utf8'));
+    } catch (e) {
+      console.error('Failed to parse', p, e);
+      return [];
+    }
+  }
+  return [];
 };
 
 const handler: Handler = async (event) => {
@@ -14,32 +20,19 @@ const handler: Handler = async (event) => {
 
   try {
     if (method === 'GET') {
-      const db = new sqlite3.Database(getDbPath(), sqlite3.OPEN_READONLY);
-
-      const getCount = (table: string): Promise<number> => {
-        return new Promise((resolve, reject) => {
-          db.get(`SELECT COUNT(*) as count FROM ${table}`, (err, row: any) => {
-            if (err) reject(err);
-            else resolve(row?.count || 0);
-          });
-        });
-      };
-
-      const suburbsCount = await getCount('suburbs');
-      const demographicsCount = await getCount('suburb_demographics');
-      const postcodesCount = await getCount('suburb_postcodes');
-
-      db.close();
+      const suburbs = loadJson('suburbs');
+      const demographics = loadJson('suburb_demographics');
+      const postcodes = loadJson('suburb_postcodes');
 
       return {
         statusCode: 200,
         body: JSON.stringify({
           status: 'healthy',
-          database: 'connected',
+          database: 'json-bundled',
           tables: {
-            suburbs: suburbsCount,
-            suburb_demographics: demographicsCount,
-            suburb_postcodes: postcodesCount,
+            suburbs: suburbs.length,
+            suburb_demographics: demographics.length,
+            suburb_postcodes: postcodes.length,
           },
           timestamp: new Date().toISOString(),
         }),
