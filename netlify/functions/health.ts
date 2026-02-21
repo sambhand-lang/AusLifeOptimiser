@@ -3,13 +3,19 @@ import path from 'path';
 import fs from 'fs';
 
 const loadJson = (name: string) => {
-  const p = path.join(__dirname, `${name}.json`);
-  if (fs.existsSync(p)) {
-    try {
-      return JSON.parse(fs.readFileSync(p, 'utf8'));
-    } catch (e) {
-      console.error('Failed to parse', p, e);
-      return [];
+  const candidates = [
+    path.join(__dirname, `${name}.json`),
+    path.join(process.cwd(), 'netlify', 'functions', `${name}.json`),
+    path.join(process.cwd(), 'netlify', `${name}.json`),
+  ];
+  for (const p of candidates) {
+    if (fs.existsSync(p)) {
+      try {
+        return JSON.parse(fs.readFileSync(p, 'utf8'));
+      } catch (e) {
+        console.error('Failed to parse', p, e);
+        return [];
+      }
     }
   }
   return [];
