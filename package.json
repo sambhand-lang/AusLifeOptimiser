@@ -1,0 +1,18 @@
+{
+  "name": "ausfinancetools",
+  "version": "1.0.0",
+  "description": "Australian Financial Tools - Full Stack Application",
+  "scripts": {
+    "dev": "concurrently \"cd app && npm run dev\" \"cd backend && cross-env PORT=5001 npm run dev\"",
+    "build": "cd app && npm run build && cd ../backend && npm run build",
+    "install-all": "cd app && npm install && cd ../backend && npm install",
+    "setup-env": "cp backend/.env.example backend/.env"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0"
+  },
+  "dependencies": {
+    "axios": "^1.13.5"
+  }
+}

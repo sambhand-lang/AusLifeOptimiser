@@ -1,0 +1,192 @@
+{
+  "metadata": {
+    "source": "ABS ASGS 2021 (Placeholder - requires official data)",
+    "dataYear": 2021,
+    "generatedAt": "2026-02-20T02:55:31.861Z",
+    "totalRecords": 33,
+    "status": "INCOMPLETE - Awaiting official ABS SSC download"
+  },
+  "states": {
+    "NSW": [
+      {
+        "ssc": "10001",
+        "suburb": "ABBOTSBURY",
+        "postcode": "2176"
+      },
+      {
+        "ssc": "10002",
+        "suburb": "ABBOTSFORD",
+        "postcode": "2046"
+      },
+      {
+        "ssc": "10003",
+        "suburb": "ABERDARE",
+        "postcode": "2325"
+      },
+      {
+        "ssc": "10004",
+        "suburb": "ABERDEEN",
+        "postcode": "2336"
+      },
+      {
+        "ssc": "10005",
+        "suburb": "ABERFELDIE",
+        "postcode": "3040"
+      },
+      {
+        "ssc": "10006",
+        "suburb": "ABERFOYLE PARK",
+        "postcode": "5159"
+      },
+      {
+        "ssc": "10007",
+        "suburb": "ABERDEEN",
+        "postcode": "2336"
+      },
+      {
+        "ssc": "10008",
+        "suburb": "ACACIA GARDENS",
+        "postcode": "2763"
+      },
+      {
+        "ssc": "10009",
+        "suburb": "ADAMSTOWN",
+        "postcode": "2289"
+      },
+      {
+        "ssc": "10010",
+        "suburb": "ADDISON",
+        "postcode": "2289"
+      },
+      {
+        "ssc": "10011",
+        "suburb": "ADENANTHOS",
+        "postcode": "6125"
+      },
+      {
+        "ssc": "10012",
+        "suburb": "ADHELS",
+        "postcode": "2540"
+      },
+      {
+        "ssc": "10013",
+        "suburb": "ADLONG",
+        "postcode": "2729"
+      },
+      {
+        "ssc": "10014",
+        "suburb": "ADMIRALTY",
+        "postcode": ""
+      },
+      {
+        "ssc": "10015",
+        "suburb": "AGNES WATER",
+        "postcode": "4677"
+      },
+      {
+        "ssc": "10016",
+        "suburb": "AIRDS",
+        "postcode": "2560"
+      },
+      {
+        "ssc": "10017",
+        "suburb": "AIREYS INLET",
+        "postcode": "3231"
+      },
+      {
+        "ssc": "10018",
+        "suburb": "ALBY",
+        "postcode": "6075"
+      },
+      {
+        "ssc": "10019",
+        "suburb": "ALEXANDER",
+        "postcode": "6064"
+      },
+      {
+        "ssc": "10020",
+        "suburb": "ALEXANDRA",
+        "postcode": "3714"
+      }
+    ],
+    "VIC": [
+      {
+        "ssc": "20001",
+        "suburb": "ABBOTSFORD",
+        "postcode": "3067"
+      },
+      {
+        "ssc": "20002",
+        "suburb": "ABERFELDIE",
+        "postcode": "3040"
+      },
+      {
+        "ssc": "20003",
+        "suburb": "ACACIA RIDGE",
+        "postcode": "4110"
+      },
+      {
+        "ssc": "20004",
+        "suburb": "ADAMSTOWN",
+        "postcode": "2289"
+      },
+      {
+        "ssc": "20005",
+        "suburb": "ADDISON",
+        "postcode": "2289"
+      }
+    ],
+    "QLD": [
+      {
+        "ssc": "30001",
+        "suburb": "ABBOTSFORD",
+        "postcode": "4005"
+      },
+      {
+        "ssc": "30002",
+        "suburb": "ACACIA RIDGE",
+        "postcode": "4110"
+      },
+      {
+        "ssc": "30003",
+        "suburb": "ADAMS",
+        "postcode": "4807"
+      }
+    ],
+    "SA": [
+      {
+        "ssc": "40001",
+        "suburb": "ABBOTSFORD",
+        "postcode": "5085"
+      }
+    ],
+    "WA": [
+      {
+        "ssc": "50001",
+        "suburb": "ABERDARE",
+        "postcode": "6116"
+      }
+    ],
+    "TAS": [
+      {
+        "ssc": "60001",
+        "suburb": "ABERCROMBIE",
+        "postcode": "7310"
+      }
+    ],
+    "NT": [
+      {
+        "ssc": "70001",
+        "suburb": "ALICE SPRINGS",
+        "postcode": "0870"
+      }
+    ],
+    "ACT": [
+      {
+        "ssc": "80001",
+        "suburb": "ACTON",
+        "postcode": "2601"
+      }
+    ]
+  }
+}
