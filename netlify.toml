@@ -1,6 +1,6 @@
 [build]
   # Frontend build command - builds the React/Vite app
-  command = "cd app && npm run build"
+  command = "cd app && npm run build && cd .. && node scripts/dump-db-to-json.js"
   # Directory to publish (the frontend build output)
   publish = "app/dist"
   # Node version
