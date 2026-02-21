@@ -40,6 +40,18 @@ const promises = Object.entries(tables).map(([name, sql]) => {
 Promise.all(promises)
   .then(() => {
     db.close();
+    
+    // Copy additional data files
+    const dataFiles = ['schools.json', 'parks.json', 'commute_times.json', 'public_transport_stops.json'];
+    dataFiles.forEach(file => {
+      const src = path.join(__dirname, '../backend', file);
+      const dest = path.join(outDir, file);
+      if (fs.existsSync(src)) {
+        fs.copyFileSync(src, dest);
+        console.log('Copied', file);
+      }
+    });
+    
     console.log('Export complete');
   })
   .catch((err) => {

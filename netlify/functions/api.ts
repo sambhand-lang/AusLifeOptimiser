@@ -3,9 +3,17 @@ import { Handler } from '@netlify/functions';
 // Load JSON datasets directly as modules
 const suburbsRaw: any[] = require('./suburbs.json');
 const demographicsRaw: any[] = require('./suburb_demographics.json');
+const schoolsRaw: any = require('./schools.json');
+const commuteRaw: any = require('./commute_times.json');
+const parksRaw: any = require('./parks.json');
+const transportRaw: any = require('./public_transport_stops.json');
 
 const suburbsData = () => suburbsRaw;
 const demographicsData = () => demographicsRaw;
+const schoolsData = () => schoolsRaw;
+const commuteData = () => commuteRaw;
+const parksData = () => parksRaw;
+const transportData = () => transportRaw;
 
 const handler: Handler = async (event) => {
   let pathStr = event.path || event.rawUrl || '';
@@ -20,6 +28,12 @@ const handler: Handler = async (event) => {
   console.log('API Route:', method, pathStr);
 
   try {
+    // Helper function to get a metric with source info
+    const getMetricData = (value: any) => {
+      if (value === null || value === undefined) return null;
+      return { value, source: 'Dataset', type: 'derived_metric' };
+    };
+
     // GET /api/v2/suburbs/:ssc/details
     if (method === 'GET' && /\/v2\/suburbs\/(\d+)\/details|v2\/suburbs\/(\d+)\/details/.test(pathStr)) {
       const match = pathStr.match(/\/v2\/suburbs\/(\d+)\/details|v2\/suburbs\/(\d+)\/details/);
@@ -46,6 +60,16 @@ const handler: Handler = async (event) => {
       const demographicsAll = demographicsData();
       const demographics = demographicsAll.find((d: any) => String(d.ssc) === String(ssc)) || null;
 
+      // Get additional metrics
+      const suburb_name = String(s.suburb_name).toUpperCase();
+      const state = s.state || (demographics && demographics.state) || 'NSW';
+      const key = `${suburb_name}|${state}`;
+      
+      const schools = schoolsData();
+      const commute = commuteData();
+      const parks = parksData();
+      const transport = transportData();
+
       // Apply postcode correction for known mismatch (HURSTVILLE ssc 12364)
       let postcodeVal = s.postcode || s.postcodes || null;
       if (String(s.ssc) === '12364' && postcodeVal === '1493') postcodeVal = '2220';
@@ -53,8 +77,14 @@ const handler: Handler = async (event) => {
       const result = {
         ...s,
         postcode: postcodeVal,
-        state: s.state || (demographics && demographics.state) || null,
+        state: state,
         demographics,
+        amenities: {
+          commute_minutes: commute[key] || null,
+          schools: schools[key] || null,
+          parks: parks[key] || null,
+          public_transport_stops: transport[key] || null,
+        },
       };
 
       return {
