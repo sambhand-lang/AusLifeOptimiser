@@ -1,51 +1,11 @@
 import { Handler } from '@netlify/functions';
-import path from 'path';
-import fs from 'fs';
 
-// Get database path from Lambda environment or local
-const getDbPath = () => {
-  // Prefer a bundled DB next to the function; fallback to the repo backend path
-  const bundled = path.join(__dirname, './suburbs.db');
-  const fallback = path.join(__dirname, '../../backend/suburbs.db');
-  if (fs.existsSync(bundled)) return bundled;
-  return fallback;
-};
+// Load JSON datasets directly as modules
+const suburbsRaw: any[] = require('./suburbs.json');
+const demographicsRaw: any[] = require('./suburb_demographics.json');
 
-// Load JSON datasets exported at deploy time
-const loadJson = (name: string) => {
-  const candidates = [
-    path.join(__dirname, `${name}.json`),
-    // Netlify Edge Functions paths
-    path.join(__dirname, '..', `${name}.json`),
-    path.join(__dirname, '..', '..', 'app', 'dist', `${name}.json`),
-    // Runtime resolution
-    path.join(process.cwd(), 'netlify', 'functions', `${name}.json`),
-    path.join(process.cwd(), 'app', 'dist', `${name}.json`),
-    path.join(process.cwd(), 'netlify', `${name}.json`),
-    // Absolute paths for Netlify build environment
-    path.join('/', 'opt', 'build', 'repo', 'netlify', 'functions', `${name}.json`),
-    path.join('/', 'opt', 'build', 'repo', 'app', 'dist', `${name}.json`),
-  ];
-  
-  console.log(`Loading ${name}...`);
-  for (const p of candidates) {
-    if (fs.existsSync(p)) {
-      try {
-        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
-        const len = Array.isArray(data) ? data.length : 0;
-        console.log(`Loaded ${name} from ${p}: ${len} items`);
-        return data;
-      } catch (e) {
-        console.error('Failed to parse', p, e);
-      }
-    }
-  }
-  console.warn(`Could not find ${name} in any path`);
-  return [];
-};
-
-const suburbsData = () => loadJson('suburbs');
-const demographicsData = () => loadJson('suburb_demographics');
+const suburbsData = () => suburbsRaw;
+const demographicsData = () => demographicsRaw;
 
 const handler: Handler = async (event) => {
   let pathStr = event.path || event.rawUrl || '';
