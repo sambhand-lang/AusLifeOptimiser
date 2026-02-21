@@ -71,7 +71,12 @@ const handler: Handler = async (event) => {
       let suburbs = suburbsData();
       if (state) suburbs = suburbs.filter((s: any) => s.state === state);
       if (query) suburbs = suburbs.filter((s: any) => String(s.suburb_name).toLowerCase().includes(query));
-      suburbs = suburbs.slice(0, 100).map((s: any) => ({ ssc: s.ssc, suburb_name: s.suburb_name, state: s.state }));
+      suburbs = suburbs.slice(0, 100).map((s: any) => {
+        let postcode = s.postcode || s.postcodes || null;
+        // Apply postcode correction for known mismatch (HURSTVILLE ssc 12364)
+        if (String(s.ssc) === '12364' && postcode === '1493') postcode = '2220';
+        return { ssc: s.ssc, suburb_name: s.suburb_name, postcode, state: s.state };
+      });
 
       return { statusCode: 200, body: JSON.stringify(suburbs) };
     }
@@ -151,7 +156,12 @@ const handler: Handler = async (event) => {
       const results = suburbs
         .filter((s: any) => String(s.suburb_name).toLowerCase().includes(q) || String((s.postcode||'')).startsWith(q))
         .slice(0, 50)
-        .map((s: any) => ({ id: s.id || s.ssc, ssc: s.ssc, suburb_name: s.suburb_name, postcode: s.postcode || s.postcodes || null, state: s.state }));
+        .map((s: any) => {
+          let postcode = s.postcode || s.postcodes || null;
+          // Apply postcode correction for known mismatch (HURSTVILLE ssc 12364)
+          if (String(s.ssc) === '12364' && postcode === '1493') postcode = '2220';
+          return { id: s.id || s.ssc, ssc: s.ssc, suburb_name: s.suburb_name, postcode, state: s.state };
+        });
       return { statusCode: 200, body: JSON.stringify({ data: results }) };
     }
 
