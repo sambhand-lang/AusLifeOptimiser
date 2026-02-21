@@ -659,18 +659,18 @@ function App() {
               <h4 className="font-semibold text-lg mb-4">Resources</h4>
               <ul className="space-y-3">
                 <li><button onClick={() => setActiveCalculator('suburb')} className="text-slate-400 hover:text-emerald-400 transition-colors">Suburb Comparison</button></li>
-                <li><a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors">First Home Buyer Guide</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors">Property Market</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors">Interest Rates</a></li>
+                <li><a href="/legal/first-home-buyer.html" className="text-slate-400 hover:text-emerald-400 transition-colors">First Home Buyer Guide</a></li>
+                <li><a href="/legal/property-market.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Property Market</a></li>
+                <li><a href="/legal/interest-rates.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Interest Rates</a></li>
               </ul>
             </div>
 
             <div>
               <h4 className="font-semibold text-lg mb-4">Legal</h4>
               <ul className="space-y-3">
-                <li><a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors">Terms of Use</a></li>
-                <li><a href="#" className="text-slate-400 hover:text-emerald-400 transition-colors">Disclaimer</a></li>
+                <li><a href="/legal/privacy.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
+                <li><a href="/legal/terms.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Terms of Use</a></li>
+                <li><a href="/legal/disclaimer.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Disclaimer</a></li>
               </ul>
             </div>
           </div>
