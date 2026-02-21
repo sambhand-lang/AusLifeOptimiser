@@ -35,18 +35,22 @@ const suburbsData = () => loadJson('suburbs');
 const demographicsData = () => loadJson('suburb_demographics');
 
 const handler: Handler = async (event) => {
-  let pathStr = event.path;
+  let pathStr = event.path || event.rawUrl || '';
   // Normalize Netlify dev rewritten function paths that may omit a slash (e.g. /.netlify/functions/apisuburbs/...)
   if (pathStr.includes('/.netlify/functions/api') && !pathStr.includes('/.netlify/functions/api/')) {
     pathStr = pathStr.replace('/.netlify/functions/api', '/.netlify/functions/api/');
   }
+  // Remove function base path for route matching
+  pathStr = pathStr.replace(/^\/.netlify\/functions\/api/, '') || '/' + (event.queryStringParameters?.['*'] || '');
+  
   const method = event.httpMethod;
+  console.log('API Route:', method, pathStr);
 
   try {
     // GET /api/v2/suburbs/:ssc/details
-    if (method === 'GET' && /\/api\/v2\/suburbs\/(\d+)\/details/.test(pathStr)) {
-      const sscMatch = pathStr.match(/\/api\/v2\/suburbs\/(\d+)\/details/);
-      const ssc = sscMatch?.[1];
+    if (method === 'GET' && /\/v2\/suburbs\/(\d+)\/details|v2\/suburbs\/(\d+)\/details/.test(pathStr)) {
+      const match = pathStr.match(/\/v2\/suburbs\/(\d+)\/details|v2\/suburbs\/(\d+)\/details/);
+      const ssc = match?.[1] || match?.[2];
 
       if (!ssc) {
         return {
@@ -87,7 +91,7 @@ const handler: Handler = async (event) => {
     }
 
     // GET /api/dropdowns/suburbs
-    if (method === 'GET' && pathStr.includes('/api/dropdowns/suburbs')) {
+    if (method === 'GET' && (pathStr.includes('dropdowns/suburbs') || pathStr.includes('/api/dropdowns/suburbs'))) {
       const state = event.queryStringParameters?.state;
       const query = event.queryStringParameters?.q?.toLowerCase();
 
@@ -100,16 +104,16 @@ const handler: Handler = async (event) => {
     }
 
     // GET /api/suburbs/states
-    if (method === 'GET' && pathStr.includes('/api/suburbs/states')) {
+    if (method === 'GET' && (pathStr.includes('/suburbs/states') || pathStr.includes('suburbs/states') || pathStr === '/api/suburbs/states')) {
       const suburbs = suburbsData();
       const states = Array.from(new Set(suburbs.map((s: any) => s.state))).sort();
       return { statusCode: 200, body: JSON.stringify(states) };
     }
 
     // GET /api/suburbs/:id/details (frontend expects this)
-    if (method === 'GET' && /\/api\/suburbs\/(\d+)\/details/.test(pathStr)) {
-      const idMatch = pathStr.match(/\/api\/suburbs\/(\d+)\/details/);
-      const id = idMatch?.[1];
+    if (method === 'GET' && (/\/suburbs\/(\d+)\/details|suburbs\/(\d+)\/details/.test(pathStr))) {
+      const match = pathStr.match(/\/suburbs\/(\d+)\/details|suburbs\/(\d+)\/details/);
+      const id = match?.[1] || match?.[2];
       if (!id) return { statusCode: 400, body: JSON.stringify({ error: 'id required' }) };
 
       const suburbs = suburbsData();
@@ -167,7 +171,7 @@ const handler: Handler = async (event) => {
     }
 
     // GET /api/suburbs/search
-    if (method === 'GET' && pathStr.includes('/api/suburbs/search')) {
+    if (method === 'GET' && (pathStr.includes('/suburbs/search') || pathStr.includes('suburbs/search'))) {
       const q = (event.queryStringParameters?.query || '').toLowerCase();
       if (!q || q.length < 1) return { statusCode: 200, body: JSON.stringify({ data: [] }) };
       const suburbs = suburbsData();
