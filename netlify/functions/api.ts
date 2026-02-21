@@ -5,9 +5,11 @@ import fs from 'fs';
 
 // Get database path from Lambda environment or local
 const getDbPath = () => {
-  // In Netlify, use the bundled database
-  const localPath = path.join(__dirname, '../../backend/suburbs.db');
-  return localPath;
+  // Prefer a bundled DB next to the function; fallback to the repo backend path
+  const bundled = path.join(__dirname, './suburbs.db');
+  const fallback = path.join(__dirname, '../../backend/suburbs.db');
+  if (fs.existsSync(bundled)) return bundled;
+  return fallback;
 };
 
 // Helper to run DB queries

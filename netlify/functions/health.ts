@@ -3,7 +3,10 @@ import sqlite3 from 'sqlite3';
 import path from 'path';
 
 const getDbPath = () => {
-  return path.join(__dirname, '../../backend/suburbs.db');
+  const bundled = path.join(__dirname, './suburbs.db');
+  const fallback = path.join(__dirname, '../../backend/suburbs.db');
+  if (fs.existsSync(bundled)) return bundled;
+  return fallback;
 };
 
 const handler: Handler = async (event) => {
