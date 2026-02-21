@@ -4,7 +4,16 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width,initial-scale=1">
 	<title>Property Market</title>
-	<style>body{font-family:system-ui,Arial,sans-serif;padding:24px;max-width:900px;margin:auto;line-height:1.5}h1{color:#0f172a}</style>
+	<style>
+		:root{--aus-green:#00703c;--aus-gold:#f6c85f;--bg:#fcfdfb}
+		body{font-family:system-ui,Arial,sans-serif;padding:28px;max-width:960px;margin:18px auto;background:var(--bg);color:#042026}
+		header{display:flex;align-items:center;gap:12px}
+		.brand{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--aus-green),#004a2e);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
+		h1{color:var(--aus-green);margin-top:6px}
+		a.home{color:var(--aus-green);text-decoration:none;font-weight:600}
+		h2{margin-top:18px;color:#04423a}
+		footer{margin-top:32px;padding-top:18px;border-top:1px solid #e6efe9;color:#04423a}
+	</style>
 </head>
 <body>
 	<h1>Property Market Overview</h1>
@@ -23,5 +32,8 @@
 
 	<h2>Sources</h2>
 	<p>Where possible rely on official sources such as the Australian Bureau of Statistics and the RBA, and consult property market reports from reputable research firms for deeper analysis.</p>
+<footer>
+		<a class="home" href="/">← Back to Home</a>
+	</footer>
 </body>
 </html>

@@ -1,6 +1,6 @@
 [build]
   # Frontend build command - builds the React/Vite app
-  command = "cd app && npm run build && cd .. && node scripts/dump-db-to-json.js && cp netlify/functions/*.json app/dist/ && ls -la app/dist/*.json || echo 'No JSON files copied'"
+  command = "cd app && npm run build && cd .. && node scripts/dump-db-to-json.js && node scripts/copy-json-to-dist.js"
   # Directory to publish (the frontend build output)
   publish = "app/dist"
   # Node version
