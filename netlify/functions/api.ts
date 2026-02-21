@@ -15,26 +15,32 @@ const getDbPath = () => {
 const loadJson = (name: string) => {
   const candidates = [
     path.join(__dirname, `${name}.json`),
-    path.join(__dirname, '../..', 'app', 'dist', `${name}.json`),  // Production publish dir
+    // Netlify Edge Functions paths
+    path.join(__dirname, '..', `${name}.json`),
+    path.join(__dirname, '..', '..', 'app', 'dist', `${name}.json`),
+    // Runtime resolution
     path.join(process.cwd(), 'netlify', 'functions', `${name}.json`),
+    path.join(process.cwd(), 'app', 'dist', `${name}.json`),
     path.join(process.cwd(), 'netlify', `${name}.json`),
-    path.join(process.cwd(), 'app', 'dist', `${name}.json`),  // Local dev
+    // Absolute paths for Netlify build environment
+    path.join('/', 'opt', 'build', 'repo', 'netlify', 'functions', `${name}.json`),
+    path.join('/', 'opt', 'build', 'repo', 'app', 'dist', `${name}.json`),
   ];
-  console.log('Looking for', name, '...');
+  
+  console.log(`Loading ${name}...`);
   for (const p of candidates) {
-    console.log('Trying:', p, 'exists:', fs.existsSync(p));
     if (fs.existsSync(p)) {
       try {
         const data = JSON.parse(fs.readFileSync(p, 'utf8'));
-        console.log('Loaded', name, 'from', p, 'rows:', Array.isArray(data) ? data.length : 'N/A');
+        const len = Array.isArray(data) ? data.length : 0;
+        console.log(`Loaded ${name} from ${p}: ${len} items`);
         return data;
       } catch (e) {
         console.error('Failed to parse', p, e);
-        return [];
       }
     }
   }
-  console.warn('Could not find', name, 'in any candidate path');
+  console.warn(`Could not find ${name} in any path`);
   return [];
 };
 

@@ -5,19 +5,31 @@ import fs from 'fs';
 const loadJson = (name: string) => {
   const candidates = [
     path.join(__dirname, `${name}.json`),
+    // Netlify Edge Functions paths
+    path.join(__dirname, '..', `${name}.json`),
+    path.join(__dirname, '..', '..', 'app', 'dist', `${name}.json`),
+    // Runtime resolution
     path.join(process.cwd(), 'netlify', 'functions', `${name}.json`),
+    path.join(process.cwd(), 'app', 'dist', `${name}.json`),
     path.join(process.cwd(), 'netlify', `${name}.json`),
+    // Absolute paths for Netlify build environment
+    path.join('/', 'opt', 'build', 'repo', 'netlify', 'functions', `${name}.json`),
+    path.join('/', 'opt', 'build', 'repo', 'app', 'dist', `${name}.json`),
   ];
+  
+  console.log(`Loading ${name}...`);
   for (const p of candidates) {
     if (fs.existsSync(p)) {
       try {
-        return JSON.parse(fs.readFileSync(p, 'utf8'));
+        const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+        console.log(`Loaded ${name} from ${p}: ${Promise.resolve(data).then(() => Array.isArray(data) ? data.length : 0)} items`);
+        return data;
       } catch (e) {
         console.error('Failed to parse', p, e);
-        return [];
       }
     }
   }
+  console.warn(`Could not find ${name}`);
   return [];
 };
 
