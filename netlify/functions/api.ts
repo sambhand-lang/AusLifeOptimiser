@@ -156,6 +156,32 @@ const handler: Handler = async (event) => {
         realTimeData.medianIncome = formatMetric('median_income', demographics);
       }
 
+      // Get additional amenity metrics
+      const suburb_name_upper = String(suburb.suburb_name).toUpperCase();
+      const suburb_state = suburb.state || (demographics && demographics.state) || 'NSW';
+      const amenity_key = `${suburb_name_upper}|${suburb_state}`;
+      
+      const schools = schoolsData();
+      const commute = commuteData();
+      const parks = parksData();
+      const transport = transportData();
+
+      if (schools[amenity_key] !== undefined) {
+        realTimeData.schools = { value: schools[amenity_key], source: 'Schools dataset', datasetYear: 2026, type: 'derived_metric' };
+      }
+
+      if (commute[amenity_key] !== undefined) {
+        realTimeData.commute = { value: commute[amenity_key], source: 'Commute times dataset', datasetYear: 2026, type: 'derived_metric' };
+      }
+
+      if (parks[amenity_key] !== undefined) {
+        realTimeData.parks = { value: parks[amenity_key], source: 'Parks dataset', datasetYear: 2026, type: 'derived_metric' };
+      }
+
+      if (transport[amenity_key] !== undefined) {
+        realTimeData.transport = { value: transport[amenity_key], source: 'Public transport dataset', datasetYear: 2026, type: 'derived_metric' };
+      }
+
       // Postcode/state cleanup: prefer suburb-level values, but apply known corrections
       let postcodeVal = suburb.postcode || suburb.postcodes || null;
       // Quick fix: HURSTVILLE (ssc 12364) should use postcode 2220 when an incorrect 1493 is present
@@ -168,7 +194,7 @@ const handler: Handler = async (event) => {
         ssc: suburb.ssc || null,
         suburb_name: suburb.suburb_name,
         postcode: postcodeVal,
-        state: suburb.state || (demographics && demographics.state) || null,
+        state: suburb_state,
         city: suburb.city || null,
         latitude: suburb.latitude || null,
         longitude: suburb.longitude || null,
