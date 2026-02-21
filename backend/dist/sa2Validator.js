@@ -17,6 +17,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.loadSA2Data = loadSA2Data;
 exports.isOfficialSA2 = isOfficialSA2;
 exports.getSA2Code = getSA2Code;
 exports.getSA2Name = getSA2Name;
@@ -75,33 +76,8 @@ function logVerificationStats(data) {
     console.info(`[SA2] Provisional assignments: ${provisionalCount} suburbs`);
     console.info(`[SA2] Coverage: ${((officialCount / (officialCount + provisionalCount)) * 100).toFixed(1)}% official`);
 }
-/**
- * Validate if a suburb belongs to an official ABS SA2 boundary
- *
- * Validation Steps:
- * 1. Normalize suburb/state to uppercase
- * 2. Lookup in ASGS 2021 register
- * 3. Verify isOfficial flag is true (not provisional)
- * 4. Confirm data year is 2021
- *
- * Returns: boolean - true only if suburb is in official ABS SA2 register
- */
-function isOfficialSA2(suburbName, state) {
-    const data = loadSA2Data();
-    const key = `${suburbName.toUpperCase()}|${state.toUpperCase()}`;
-    const boundary = data[key];
-    if (!boundary) {
-        console.debug(`[SA2-VALIDATION] "${suburbName}" (${state}) not in ASGS 2021 register`);
-        return false; // Unknown suburb/state combination
-    }
-    const isOfficial = boundary.isOfficial === true && boundary.dataYear === 2021;
-    if (!isOfficial) {
-        console.debug(`[SA2-VALIDATION] "${suburbName}" (${state}) found but not official (provisional assignment to SA2 ${boundary.code})`);
-    }
-    else {
-        console.debug(`[SA2-VALIDATION] "${suburbName}" (${state}) verified in ASGS 2021 as part of SA2 ${boundary.code}`);
-    }
-    return isOfficial;
+function isOfficialSA2(sa2) {
+    return sa2?.isOfficial === true;
 }
 /**
  * Get SA2 code for a suburb (for cross-referencing with ABS data)
@@ -157,13 +133,18 @@ function getDetailedSA2Validation(suburbName, state) {
  * Validate all suburbs in a list against official SA2 boundaries
  */
 function validateSuburbsAsSA2(suburbs) {
-    return suburbs.map(({ name, state }) => ({
-        suburb: name,
-        state,
-        isOfficial: isOfficialSA2(name, state),
-        sa2Code: getSA2Code(name, state) || undefined,
-        sa2Name: getSA2Name(name, state) || undefined
-    }));
+    const data = loadSA2Data();
+    return suburbs.map(({ name, state }) => {
+        const key = `${name.toUpperCase()}|${state.toUpperCase()}`;
+        const boundary = data[key];
+        return {
+            suburb: name,
+            state,
+            isOfficial: isOfficialSA2(boundary),
+            sa2Code: boundary?.code || getSA2Code(name, state) || undefined,
+            sa2Name: boundary?.name || getSA2Name(name, state) || undefined
+        };
+    });
 }
 exports.default = {
     isOfficialSA2,

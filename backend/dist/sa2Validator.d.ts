@@ -20,6 +20,11 @@ export interface SA2Boundary {
     isOfficial: boolean;
     dataYear: 2021;
     source?: string;
+    sa2_codes?: Array<{
+        code: string;
+        name: string;
+        coveragePercent: number;
+    }>;
 }
 export interface SA2Index {
     [key: string]: SA2Boundary;
@@ -31,19 +36,15 @@ export interface SA2Index {
  * Reference: https://www.abs.gov.au/ausstats/abs@.nsf/mf/1270.0.55.001
  * Format: { "SUBURB|STATE": { code, name, state, suburbs[...], isOfficial: true, dataYear: 2021 } }
  */
-declare function loadSA2Data(): SA2Index;
+export declare function loadSA2Data(): SA2Index;
 /**
- * Validate if a suburb belongs to an official ABS SA2 boundary
+ * Check if an SA2 mapping object is an official ABS mapping.
  *
- * Validation Steps:
- * 1. Normalize suburb/state to uppercase
- * 2. Lookup in ASGS 2021 register
- * 3. Verify isOfficial flag is true (not provisional)
- * 4. Confirm data year is 2021
- *
- * Returns: boolean - true only if suburb is in official ABS SA2 register
+ * This function expects the SA2 mapping object (from `loadSA2Data()[key]`) and
+ * returns true only when the mapping is explicitly marked as official.
  */
-export declare function isOfficialSA2(suburbName: string, state: string): boolean;
+export type SA2Mapping = SA2Boundary | undefined | null;
+export declare function isOfficialSA2(sa2: SA2Mapping): boolean;
 /**
  * Get SA2 code for a suburb (for cross-referencing with ABS data)
  *

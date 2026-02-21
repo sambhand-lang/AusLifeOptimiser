@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
         let sql = 'SELECT * FROM suburbs ORDER BY suburb_name';
         const params = [];
         if (state) {
-            sql = 'SELECT * FROM suburbs WHERE state = $1 ORDER BY suburb_name';
+            sql = 'SELECT * FROM suburbs WHERE state = ? ORDER BY suburb_name';
             params.push(state.toUpperCase());
         }
         const result = await (0, db_1.query)(sql, params);
@@ -36,13 +36,26 @@ router.get('/search', async (req, res) => {
         if (!searchQuery) {
             return res.status(400).json({ error: 'Search query is required' });
         }
-        let sql = "SELECT * FROM suburbs WHERE suburb_name LIKE ? ORDER BY suburb_name";
-        const params = [`%${searchQuery.toUpperCase()}%`];
+        // Build query to prioritize:
+        // 1. Exact surname matches (e.g., "PARRAMATTA" before "NORTH PARRAMATTA")
+        // 2. Non-null postcodes before null
+        // 3. Higher postcode numbers first (main postcodes tend to be higher)
+        // 4. Alphabetically by suburb name
+        const upperQuery = searchQuery.toUpperCase();
+        let sql = `
+      SELECT * FROM suburbs 
+      WHERE suburb_name LIKE ? ${state ? 'AND state = ?' : ''}
+      ORDER BY 
+        CASE WHEN suburb_name = ? THEN 0 ELSE 1 END,
+        postcode IS NOT NULL DESC,
+        CAST(postcode AS INTEGER) DESC,
+        suburb_name ASC
+    `;
+        const params = [`%${upperQuery}%`];
         if (state) {
-            sql =
-                "SELECT * FROM suburbs WHERE suburb_name LIKE ? AND state = ? ORDER BY suburb_name";
             params.push(state.toUpperCase());
         }
+        params.push(upperQuery); // For exact match comparison
         const result = await (0, db_1.query)(sql, params);
         res.json({
             total: result.rows.length,
@@ -77,7 +90,7 @@ router.get('/by-city', async (req, res) => {
 router.get('/:id/details', async (req, res) => {
     try {
         const id = req.params.id;
-        const result = await (0, db_1.query)('SELECT * FROM suburbs WHERE id = $1', [id]);
+        const result = await (0, db_1.query)('SELECT * FROM suburbs WHERE id = ?', [id]);
         if (result.rows.length === 0) {
             return res.status(404).json({ error: 'Suburb not found' });
         }
@@ -144,6 +157,10 @@ router.get('/:id/details', async (req, res) => {
             if (realData.parks.source)
                 sources.push(realData.parks.source);
         }
+        // dataIntegrity: metadata about data source and aggregation
+        if (realData.dataIntegrity) {
+            normalized.dataIntegrity = realData.dataIntegrity;
+        }
         // dedupe sources
         const uniqueSources = Array.from(new Set(sources));
         res.json({
@@ -155,6 +172,86 @@ router.get('/:id/details', async (req, res) => {
     }
     catch (err) {
         console.error('Error fetching suburb details:', err);
+        res.status(500).json({ error: 'Failed to fetch suburb details' });
+    }
+});
+// GET /api/suburbs/ssc/:ssc/details - Get detailed suburb data by SSC
+router.get('/ssc/:ssc/details', async (req, res) => {
+    try {
+        const ssc = req.params.ssc;
+        if (!ssc)
+            return res.status(400).json({ error: 'SSC is required' });
+        const result = await (0, db_1.query)('SELECT * FROM suburbs WHERE ssc = ? LIMIT 1', [ssc]);
+        if (result.rowCount === 0) {
+            return res.status(404).json({ error: 'Suburb not found' });
+        }
+        const suburb = result.rows[0];
+        // Enforce ABS presence
+        const absMetrics = await externalDataService_1.ExternalDataService.getAbsMetrics(suburb.suburb_name, suburb.state);
+        if (!absMetrics.population) {
+            console.error('ABS boundary/population missing for suburb', suburb.suburb_name, suburb.state);
+            return res.status(404).json({ error: 'Suburb not found in ABS dataset' });
+        }
+        const realData = await externalDataService_1.ExternalDataService.getSuburbRealData(suburb.suburb_name, suburb.state, suburb.postcode);
+        // reuse normalization logic from existing handler
+        const normalized = {};
+        const sources = [];
+        if (realData.population) {
+            normalized.population = realData.population;
+            if (realData.population.source)
+                sources.push(realData.population.source);
+        }
+        if (realData.medianAge) {
+            normalized.medianAge = realData.medianAge;
+            if (realData.medianAge.source)
+                sources.push(realData.medianAge.source);
+        }
+        if (realData.householdSize) {
+            normalized.householdSize = realData.householdSize;
+            if (realData.householdSize.source)
+                sources.push(realData.householdSize.source);
+        }
+        if (realData.employmentRate) {
+            normalized.employmentRate = realData.employmentRate;
+            if (realData.employmentRate.source)
+                sources.push(realData.employmentRate.source);
+        }
+        if (realData.medianIncome) {
+            normalized.medianIncome = realData.medianIncome;
+            if (realData.medianIncome.source)
+                sources.push(realData.medianIncome.source);
+        }
+        const commuteObj = realData?.commute;
+        if (commuteObj && typeof commuteObj === 'object' && commuteObj.drivingTimeMinutes && commuteObj.drivingTimeMinutes.value != null) {
+            normalized.commute = { drivingTimeMinutes: commuteObj.drivingTimeMinutes };
+            if (commuteObj.drivingTimeMinutes.source)
+                sources.push(commuteObj.drivingTimeMinutes.source);
+        }
+        if (realData?.schools && realData.schools.count && realData.schools.count.value != null) {
+            normalized.schools = { count: realData.schools.count };
+            if (realData.schools.count.source)
+                sources.push(realData.schools.count.source);
+        }
+        if (realData.publicTransportStops && realData.publicTransportStops.value != null) {
+            normalized.publicTransportStops = realData.publicTransportStops;
+            if (realData.publicTransportStops.source)
+                sources.push(realData.publicTransportStops.source);
+        }
+        if (realData.parks && realData.parks.value != null) {
+            normalized.parks = realData.parks;
+            if (realData.parks.source)
+                sources.push(realData.parks.source);
+        }
+        const uniqueSources = Array.from(new Set(sources));
+        res.json({
+            ...suburb,
+            realTimeData: normalized,
+            dataSource: uniqueSources.length ? uniqueSources.join(', ') : 'ABS',
+            lastUpdated: new Date().toISOString()
+        });
+    }
+    catch (err) {
+        console.error('Error fetching suburb details by SSC:', err);
         res.status(500).json({ error: 'Failed to fetch suburb details' });
     }
 });

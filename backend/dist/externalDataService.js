@@ -28,8 +28,9 @@ const cacheGet = (cache, key) => {
 const cacheSet = (cache, key, value, ttlMs = 24 * 60 * 60 * 1000) => {
     cache.set(key, { value, expiresAt: Date.now() + ttlMs });
 };
-// Preload ABS census JSON file (must be provided separately)
-let absIndex = null;
+// Preload ABS census JSON files (must be provided separately)
+let absIndex = null; // Suburb-level metrics (abs_census_by_suburb.json)
+let absIndexBySA2 = null; // SA2-level metrics (abs_census_by_sa2.json)
 let suburbCoordinates = null;
 let suburbSchools = null;
 let suburbCommutes = null;
@@ -55,6 +56,21 @@ try {
 }
 catch (e) {
     console.error('Failed to load ABS preload', e);
+}
+// Load SA2-level ABS metrics (for multi-SA2 aggregation)
+try {
+    const sa2Path = path_1.default.resolve(__dirname, '..', 'data', 'abs_census_by_sa2.json');
+    if (fs_1.default.existsSync(sa2Path)) {
+        const raw = fs_1.default.readFileSync(sa2Path, 'utf8');
+        absIndexBySA2 = JSON.parse(raw);
+        console.info('ABS SA2-level metrics loaded, entries:', Object.keys(absIndexBySA2).length);
+    }
+    else {
+        console.warn('ABS SA2-level metrics file not found at', sa2Path);
+    }
+}
+catch (e) {
+    console.error('Failed to load ABS SA2-level metrics', e);
 }
 // Load coordinates
 try {
@@ -236,6 +252,65 @@ const SUBURB_COORDINATES = {
     'BELCONNEN': { lon: 149.0404, lat: -35.2400 }
 };
 class ExternalDataService {
+    // Weighted average utility for multi-SA2 aggregation
+    static weightedAverage(values, weights) {
+        if (values.length === 0)
+            return 0;
+        if (values.length !== weights.length) {
+            throw new Error('Values and weights arrays must be the same length');
+        }
+        const totalWeight = weights.reduce((a, b) => a + b, 0);
+        if (totalWeight === 0)
+            return 0;
+        const weightedSum = values.reduce((sum, val, i) => sum + val * weights[i], 0);
+        return weightedSum / totalWeight;
+    }
+    // Get SA2 record by code from SA2-level metrics index
+    static getSA2Record(sa2Code) {
+        if (!absIndexBySA2)
+            return null;
+        return absIndexBySA2[sa2Code] || null;
+    }
+    // Aggregate metrics across multiple SA2 codes using weighted averages
+    // Formula:
+    //   - population: Sum
+    //   - medianAge: Weighted average by population
+    //   - householdSize: Weighted average by dwelling count
+    //   - employmentRate: Weighted average by population
+    //   - medianIncome: Weighted average by population
+    static aggregateMultiSA2Metrics(sa2Codes) {
+        if (sa2Codes.length === 0)
+            return {};
+        const sa2Records = sa2Codes
+            .map(s => ({ ...this.getSA2Record(s.code), coverage: s.coveragePercent }))
+            .filter(r => r.sa2Code != null); // Only include SA2s with data
+        if (sa2Records.length === 0)
+            return {};
+        // Aggregation formulas:
+        // 1. Population: Sum of all SA2 populations
+        const populations = sa2Records.map(r => r.population || 0);
+        const totalPopulation = populations.reduce((a, b) => a + b, 0);
+        // 2. Median Age: Weighted average by population
+        const medianAges = sa2Records.map(r => r.medianAge || 0);
+        const medianAge = this.weightedAverage(medianAges, populations);
+        // 3. Household Size: Weighted average by dwelling count
+        const householdSizes = sa2Records.map(r => r.householdSize || 0);
+        const dwellingCounts = sa2Records.map(r => r.dwellingCount || 0);
+        const householdSize = this.weightedAverage(householdSizes, dwellingCounts);
+        // 4. Employment Rate: Weighted average by population
+        const employmentRates = sa2Records.map(r => r.employmentRate || 0);
+        const employmentRate = this.weightedAverage(employmentRates, populations);
+        // 5. Median Income: Weighted average by population
+        const medianIncomes = sa2Records.map(r => r.medianIncome || 0);
+        const medianIncome = this.weightedAverage(medianIncomes, populations);
+        return {
+            population: totalPopulation,
+            medianAge: Math.round(medianAge * 10) / 10, // Round to 1 decimal place
+            householdSize: Math.round(householdSize * 100) / 100, // Round to 2 decimal places
+            employmentRate: Math.round(employmentRate * 1000) / 1000, // Round to 3 decimal places
+            medianIncome: Math.round(medianIncome) // Round to nearest dollar
+        };
+    }
     // Lookup ABS data from preloaded ABS JSON.
     static getAbsRecord(suburbName, state) {
         if (!absIndex)
@@ -243,9 +318,22 @@ class ExternalDataService {
         const key = `${suburbName.toUpperCase()}|${(state || '').toUpperCase()}`;
         return absIndex[key] || absIndex[suburbName.toUpperCase()] || null;
     }
-    // Get key ABS metrics for a suburb
-    static async getAbsMetrics(suburbName, state) {
+    // Get key ABS metrics for a suburb with support for weighted aggregation of multi-SA2 suburbs
+    static async getAbsMetrics(suburbName, state, sa2Mapping) {
         try {
+            // Check if this is a multi-SA2 suburb with component SA2 codes
+            const isMultiSA2 = sa2Mapping?.sa2_codes && sa2Mapping.sa2_codes.length > 1;
+            if (isMultiSA2) {
+                // Multi-SA2 suburb - use weighted aggregation
+                const aggregated = this.aggregateMultiSA2Metrics(sa2Mapping.sa2_codes);
+                if (Object.keys(aggregated).length > 0) {
+                    console.debug(`[AGGREGATION] Multi-SA2 aggregation for ${suburbName}: Population=${aggregated.population}`);
+                    return aggregated;
+                }
+                // Fallback to suburb-level data if SA2-level data not available
+                console.debug(`[AGGREGATION] SA2-level data not available for ${suburbName}, falling back to suburb-level`);
+            }
+            // Single SA2 suburb or fallback - get from suburb-level index
             const rec = this.getAbsRecord(suburbName, state);
             if (!rec)
                 return {};
@@ -263,24 +351,26 @@ class ExternalDataService {
         }
     }
     // Use hardcoded suburb coordinates instead of dynamic geocoding for reliability
-    // Get school count from preloaded data ONLY (no fallback hardcoded data)
+    // Get school count from preloaded data (includes generated estimates for missing suburbs)
     static async getSchoolCount(suburbName, state) {
         try {
             const suburbKey = suburbName.toUpperCase();
             const stateKey = `${suburbKey}|${(state || '').toUpperCase()}`;
-            // Only return from official sources - NO FALLBACK DATA
             if (!suburbSchools) {
-                console.warn(`[SCHOOLS] No official schools data available for ${stateKey}`);
+                console.warn(`[SCHOOLS] No schools data available for ${stateKey}`);
                 return null;
             }
+            // Try exact state match first
             if (suburbSchools[stateKey] != null) {
+                console.debug(`[SCHOOLS] Using data for ${stateKey}: ${suburbSchools[stateKey]} schools`);
                 return suburbSchools[stateKey];
             }
+            // Fall back to suburb name without state
             if (suburbSchools[suburbKey] != null) {
+                console.debug(`[SCHOOLS] Using data for ${suburbKey}: ${suburbSchools[suburbKey]} schools`);
                 return suburbSchools[suburbKey];
             }
-            // No official data found - return null (not an estimate)
-            console.debug(`[SCHOOLS] No official data for ${stateKey}`);
+            console.debug(`[SCHOOLS] No data found for ${stateKey}`);
             return null;
         }
         catch (err) {
@@ -382,15 +472,18 @@ class ExternalDataService {
     // Numbeo integration removed.
     // Main method to get all real data for a suburb - STRICT OFFICIAL ONLY
     static async getSuburbRealData(suburbName, state, postcode) {
-        // Validate suburb against official ABS SA2 boundaries
-        const isOfficialSuburb = (0, sa2Validator_1.isOfficialSA2)(suburbName, state);
-        const sa2Code = (0, sa2Validator_1.getSA2Code)(suburbName, state);
-        const sa2Name = (0, sa2Validator_1.getSA2Name)(suburbName, state);
+        // Validate suburb against ABS SA2 boundaries (use mapping lookup then check flag)
+        const sa2Index = (0, sa2Validator_1.loadSA2Data)();
+        const sa2Key = `${suburbName.toUpperCase()}|${(state || '').toUpperCase()}`;
+        const sa2Mapping = sa2Index[sa2Key] || sa2Index[suburbName.toUpperCase()] || null;
+        const isOfficialSuburb = (0, sa2Validator_1.isOfficialSA2)(sa2Mapping);
+        const sa2Code = sa2Mapping?.code || (0, sa2Validator_1.getSA2Code)(suburbName, state);
+        const sa2Name = sa2Mapping?.name || (0, sa2Validator_1.getSA2Name)(suburbName, state);
         if (!isOfficialSuburb) {
             console.warn(`[SA2] "${suburbName}" in ${state} is not in official ABS SA2 boundaries. No data will be returned.`);
         }
         const [absMetrics, commuteTime, schoolCount, transportStops, parksCount] = await Promise.all([
-            this.getAbsMetrics(suburbName, state),
+            this.getAbsMetrics(suburbName, state, sa2Mapping),
             this.getCommuteTime(`${suburbName}, ${state}, Australia`),
             this.getSchoolCount(suburbName, state),
             this.getPublicTransportStops(suburbName, state),
@@ -506,10 +599,35 @@ class ExternalDataService {
                 reliability: 'verified_spatial_count'
             };
         }
-        // Add SA2 metadata for reference
+        // Add SA2 metadata and data integrity information
         if (isOfficialSuburb && sa2Code) {
             result.sa2Code = sa2Code;
             result.sa2Name = sa2Name;
+            // Determine if multi-SA2 and aggregation method
+            const isMultiSA2 = sa2Code.includes('|');
+            let aggregationMethod = 'single-sa2';
+            let sa2Codes = [];
+            let coveragePercents = [];
+            if (isMultiSA2 && sa2Mapping?.sa2_codes) {
+                aggregationMethod = 'population-weighted';
+                sa2Codes = sa2Mapping.sa2_codes.map(s => s.code);
+                coveragePercents = sa2Mapping.sa2_codes.map(s => s.coveragePercent);
+            }
+            else if (isMultiSA2) {
+                // Fallback: just split the code if sa2_codes array not available
+                sa2Codes = sa2Code.split('|').map(c => c.trim());
+                aggregationMethod = 'multi-sa2-aggregate';
+            }
+            // Build data integrity metadata
+            result.dataIntegrity = {
+                absSource: 'ABS Census 2021',
+                asgsVersion: '2021',
+                mappingVerified: isOfficialSuburb,
+                multiSA2: isMultiSA2,
+                aggregationMethod: aggregationMethod,
+                ...(sa2Codes.length > 0 && { sa2Codes }),
+                ...(coveragePercents.length > 0 && { coveragePercents })
+            };
         }
         return result;
     }

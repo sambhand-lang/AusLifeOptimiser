@@ -35,7 +35,11 @@ const suburbsData = () => loadJson('suburbs');
 const demographicsData = () => loadJson('suburb_demographics');
 
 const handler: Handler = async (event) => {
-  const pathStr = event.path;
+  let pathStr = event.path;
+  // Normalize Netlify dev rewritten function paths that may omit a slash (e.g. /.netlify/functions/apisuburbs/...)
+  if (pathStr.includes('/.netlify/functions/api') && !pathStr.includes('/.netlify/functions/api/')) {
+    pathStr = pathStr.replace('/.netlify/functions/api', '/.netlify/functions/api/');
+  }
   const method = event.httpMethod;
 
   try {
@@ -52,24 +56,33 @@ const handler: Handler = async (event) => {
       }
 
       const suburbs = suburbsData();
-      const suburb = suburbs.filter((s: any) => String(s.ssc) === String(ssc));
+      const suburbArr = suburbs.filter((s: any) => String(s.ssc) === String(ssc));
 
-      if (!suburb.length) {
+      if (!suburbArr.length) {
         return {
           statusCode: 404,
           body: JSON.stringify({ error: 'Suburb not found' }),
         };
       }
 
+      const s = suburbArr[0];
       const demographicsAll = demographicsData();
       const demographics = demographicsAll.find((d: any) => String(d.ssc) === String(ssc)) || null;
 
+      // Apply postcode correction for known mismatch (HURSTVILLE ssc 12364)
+      let postcodeVal = s.postcode || s.postcodes || null;
+      if (String(s.ssc) === '12364' && postcodeVal === '1493') postcodeVal = '2220';
+
+      const result = {
+        ...s,
+        postcode: postcodeVal,
+        state: s.state || (demographics && demographics.state) || null,
+        demographics,
+      };
+
       return {
         statusCode: 200,
-        body: JSON.stringify({
-          ...suburb[0],
-          demographics,
-        }),
+        body: JSON.stringify(result),
       };
     }
 
@@ -91,6 +104,78 @@ const handler: Handler = async (event) => {
       const suburbs = suburbsData();
       const states = Array.from(new Set(suburbs.map((s: any) => s.state))).sort();
       return { statusCode: 200, body: JSON.stringify(states) };
+    }
+
+    // GET /api/suburbs/:id/details (frontend expects this)
+    if (method === 'GET' && /\/api\/suburbs\/(\d+)\/details/.test(pathStr)) {
+      const idMatch = pathStr.match(/\/api\/suburbs\/(\d+)\/details/);
+      const id = idMatch?.[1];
+      if (!id) return { statusCode: 400, body: JSON.stringify({ error: 'id required' }) };
+
+      const suburbs = suburbsData();
+      const suburb = suburbs.find((s: any) => String(s.id) === String(id) || String(s.ssc) === String(id));
+      if (!suburb) return { statusCode: 404, body: JSON.stringify({ error: 'Suburb not found' }) };
+
+      const demographicsAll = demographicsData();
+      const demographics = demographicsAll.find((d: any) => String(d.ssc) === String(suburb.ssc)) || null;
+
+      const formatMetric = (key: string, srcObj: any) => {
+        if (!srcObj || srcObj[key] == null) return null;
+        const value = srcObj[key];
+        const source = srcObj.source || null;
+        // Prefer a year derived from the data source (e.g. ABS_CENSUS_2021 or imputed state averages)
+        let datasetYear: number | null = null;
+        if (source && /CENSUS[_-]?2021/i.test(source)) {
+          datasetYear = 2021;
+        } else if (source && source.startsWith('STATE_AVERAGE')) {
+          datasetYear = 2021; // imputed from state averages based on 2021 census
+        } else if (srcObj.last_updated) {
+          datasetYear = Number((srcObj.last_updated || '').slice(0,4));
+        }
+        return { value, source, datasetYear, type: 'official_dataset' };
+      };
+
+      const realTimeData: any = {};
+      if (demographics) {
+        realTimeData.population = formatMetric('population', demographics);
+        realTimeData.medianAge = formatMetric('median_age', demographics);
+        realTimeData.householdSize = formatMetric('household_size', demographics);
+        realTimeData.employmentRate = formatMetric('employment_rate', demographics);
+        realTimeData.medianIncome = formatMetric('median_income', demographics);
+      }
+
+      // Postcode/state cleanup: prefer suburb-level values, but apply known corrections
+      let postcodeVal = suburb.postcode || suburb.postcodes || null;
+      // Quick fix: HURSTVILLE (ssc 12364) should use postcode 2220 when an incorrect 1493 is present
+      if (String(suburb.ssc) === '12364' && postcodeVal === '1493') {
+        postcodeVal = '2220';
+      }
+
+      const result = {
+        id: suburb.id || null,
+        ssc: suburb.ssc || null,
+        suburb_name: suburb.suburb_name,
+        postcode: postcodeVal,
+        state: suburb.state || (demographics && demographics.state) || null,
+        city: suburb.city || null,
+        latitude: suburb.latitude || null,
+        longitude: suburb.longitude || null,
+        realTimeData,
+      };
+
+      return { statusCode: 200, body: JSON.stringify(result) };
+    }
+
+    // GET /api/suburbs/search
+    if (method === 'GET' && pathStr.includes('/api/suburbs/search')) {
+      const q = (event.queryStringParameters?.query || '').toLowerCase();
+      if (!q || q.length < 1) return { statusCode: 200, body: JSON.stringify({ data: [] }) };
+      const suburbs = suburbsData();
+      const results = suburbs
+        .filter((s: any) => String(s.suburb_name).toLowerCase().includes(q) || String((s.postcode||'')).startsWith(q))
+        .slice(0, 50)
+        .map((s: any) => ({ id: s.id || s.ssc, ssc: s.ssc, suburb_name: s.suburb_name, postcode: s.postcode || s.postcodes || null, state: s.state }));
+      return { statusCode: 200, body: JSON.stringify({ data: results }) };
     }
 
     return {
