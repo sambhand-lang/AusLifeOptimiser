@@ -301,18 +301,22 @@ export function SuburbComparison() {
 
   const getCommuteMetric = (s: SuburbData | null) => {
     if (!s || !s.realTimeData) return null;
-    // prefer nested drivingTimeMinutes, fallback to legacy commuteTime or numeric
-    return s.realTimeData?.commute?.drivingTimeMinutes ?? (s.realTimeData as any).commuteTime ?? (s.realTimeData as any).commuteMinutes ?? null;
+    // Accept both new backend (value) and legacy keys
+    if ((s.realTimeData as any).commute?.value !== undefined) return (s.realTimeData as any).commute.value;
+    return (s.realTimeData as any).commute?.drivingTimeMinutes ?? (s.realTimeData as any).commuteTime ?? (s.realTimeData as any).commuteMinutes ?? null;
   };
 
   const getSchoolCountMetric = (s: SuburbData | null) => {
     if (!s || !s.realTimeData) return null;
-    return s.realTimeData?.schools?.count ?? (s.realTimeData as any).schoolCount ?? null;
+    if ((s.realTimeData as any).schools?.value !== undefined) return (s.realTimeData as any).schools.value;
+    return (s.realTimeData as any).schools?.count ?? (s.realTimeData as any).schoolCount ?? null;
   };
 
   const getPublicTransportStopsMetric = (s: SuburbData | null) => {
     if (!s || !s.realTimeData) return null;
-    return (s.realTimeData as any).publicTransportStops ?? null;
+    // Accept both new backend (value) and legacy keys
+    if ((s.realTimeData as any).transport?.value !== undefined) return (s.realTimeData as any).transport.value;
+    return (s.realTimeData as any).publicTransportStops ?? (s.realTimeData as any).transport ?? null;
   };
 
   const getParksMetric = (s: SuburbData | null) => {
