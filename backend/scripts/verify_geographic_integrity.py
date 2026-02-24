@@ -46,6 +46,21 @@ def check_geography_integrity():
     cursor.execute("SELECT COUNT(DISTINCT ssc) as count FROM suburbs WHERE ssc IS NOT NULL")
     ssc_count = cursor.fetchone()['count']
     print(f"✓ Total distinct SSCs in suburbs table: {ssc_count}")
+
+    # QA Rule: Throw error if census missing and suburb exists in SSC list
+    cursor.execute("SELECT ssc, suburb_name, state FROM suburbs WHERE ssc IS NOT NULL")
+    all_sscs = {row['ssc']: (row['suburb_name'], row['state']) for row in cursor.fetchall()}
+
+    cursor.execute("SELECT ssc FROM census WHERE ssc IS NOT NULL")
+    census_sscs = {row['ssc'] for row in cursor.fetchall()}
+
+    missing_census = set(all_sscs.keys()) - census_sscs
+    if missing_census:
+        print(f"\n❌ ERROR: {len(missing_census)} SSCs exist in suburbs table but are missing from census data:")
+        for ssc in list(missing_census)[:10]:
+            suburb, state = all_sscs[ssc]
+            print(f"  - {ssc}: {suburb} ({state})")
+        raise Exception("QA rule failed: Census data missing for suburb(s) present in SSC list.")
     
     # 2. Check postcodes coverage
     cursor.execute("""

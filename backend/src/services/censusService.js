@@ -4,33 +4,26 @@
  * Loads and provides access to demographic metrics
  */
 
-const fs = require('fs');
-const path = require('path');
 
-let censusData = null;
-let commuteData = null;
+const sqlite3 = require('sqlite3').verbose();
+const dbPath = path.join(__dirname, '../suburbs.db');
+let db = null;
 
 /**
  * Initialize census data - load from JSON files
  */
 async function initializeCensusData() {
   try {
-    const censusPath = path.join(__dirname, '../../data/abs/abs_census_by_suburb_expanded.json');
-    const commutePath = path.join(__dirname, '../../data/abs/commute_times.json');
-    
-    if (fs.existsSync(censusPath)) {
-      censusData = JSON.parse(fs.readFileSync(censusPath, 'utf8'));
-      console.log(`[CENSUS] Loaded census data for ${Object.keys(censusData).length || censusData.length} records`);
-    }
-    
-    if (fs.existsSync(commutePath)) {
-      commuteData = JSON.parse(fs.readFileSync(commutePath, 'utf8'));
-      console.log(`[CENSUS] Loaded commute times for ${Object.keys(commuteData).length} suburbs`);
-    }
+    db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
+      if (err) {
+        console.error('[CENSUS] Failed to connect to suburbs.db:', err.message);
+      } else {
+        console.log('[CENSUS] Connected to suburbs.db');
+      }
+    });
   } catch (err) {
-    console.error('[CENSUS] Failed to initialize census data:', err.message);
-    censusData = [];
-    commuteData = {};
+    console.error('[CENSUS] Failed to initialize census db:', err.message);
+    db = null;
   }
 }
 
@@ -42,42 +35,49 @@ async function initializeCensusData() {
  * @returns {object|null} Metric object with value, source, year, type
  */
 function getCensusMetric(suburbName, state, metricKey) {
-  if (!censusData) return null;
-  
-  // Handle both array and object formats
-  let suburb;
-  
-  if (Array.isArray(censusData)) {
-    suburb = censusData.find(
-      (s) =>
-        s.suburb_name?.toUpperCase() === suburbName.toUpperCase() &&
-        s.state === state
-    );
-  } else {
-    const key = `${suburbName}|${state}`;
-    suburb = censusData[key];
-  }
-  
-  if (!suburb || suburb[metricKey] == null) {
-    return null;
-  }
-  
-  const metricConfigs = {
-    population: {
-      source: 'ABS Census (Population estimate)',
-      year: 2021,
-      type: 'official_dataset'
-    },
-    median_age: {
-      source: 'ABS Census (Demographics)',
-      year: 2021,
-      type: 'official_dataset'
-    },
-    household_size: {
-      source: 'ABS Census (Housing)',
-      year: 2021,
-      type: 'official_dataset'
-    },
+  return new Promise((resolve, reject) => {
+    if (!db) return resolve(null);
+    const query = `SELECT population, median_age, household_size, employment_rate, median_income FROM suburbs WHERE Suburb_Name = ? AND State = ?`;
+    db.get(query, [suburbName, state], (err, row) => {
+      if (err) {
+        return resolve(null);
+      }
+      if (!row || row[metricKey] == null) {
+        return resolve(null);
+      }
+      const metricConfigs = {
+        population: {
+          source: 'ABS Census (Population estimate)',
+          year: 2021,
+          type: 'official_dataset'
+        },
+        median_age: {
+          source: 'ABS Census (Demographics)',
+          year: 2021,
+          type: 'official_dataset'
+        },
+        household_size: {
+          source: 'ABS Census (Housing)',
+          year: 2021,
+          type: 'official_dataset'
+        },
+        employment_rate: {
+          source: 'ABS Census (Employment)',
+          year: 2021,
+          type: 'official_dataset'
+        },
+        median_income: {
+          source: 'ABS Census (Income)',
+          year: 2021,
+          type: 'official_dataset'
+        }
+      };
+      resolve({
+        value: row[metricKey],
+        ...metricConfigs[metricKey]
+      });
+    });
+  });
     employment_rate: {
       source: 'ABS Census (Employment)',
       year: 2021,
@@ -112,11 +112,22 @@ function getCensusMetric(suburbName, state, metricKey) {
  */
 function getSuburbCensusData(suburbName, state) {
   return {
-    population: getCensusMetric(suburbName, state, 'population'),
-    medianAge: getCensusMetric(suburbName, state, 'median_age'),
-    householdSize: getCensusMetric(suburbName, state, 'household_size'),
-    employmentRate: getCensusMetric(suburbName, state, 'employment_rate'),
-    medianIncome: getCensusMetric(suburbName, state, 'median_income')
+  return new Promise((resolve, reject) => {
+    if (!db) return resolve(null);
+    const query = `SELECT population, median_age, household_size, employment_rate, median_income FROM suburbs WHERE Suburb_Name = ? AND State = ?`;
+    db.get(query, [suburbName, state], (err, row) => {
+      if (err || !row) {
+        return resolve(null);
+      }
+      resolve({
+        population: row.population,
+        medianAge: row.median_age,
+        householdSize: row.household_size,
+        employmentRate: row.employment_rate,
+        medianIncome: row.median_income
+      });
+    });
+  });
   };
 }
 

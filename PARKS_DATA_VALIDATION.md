@@ -1,4 +1,17 @@
 # Parks Data Accuracy - ⚠️ CRITICAL LIMITATION
+## Spatial Count Validation: OpenStreetMap Comparison
+
+Recent OSM park counts (via Overpass API):
+
+| Suburb      | OSM Parks | Our Data | Status      |
+|-------------|-----------|----------|-------------|
+| Hurstville  | 22        | 2        | ❌ Major gap |
+| Bondi       | 4         | 2        | ❌ Under-count|
+| Parramatta  | 44        | 2        | ❌ Major gap |
+
+**Conclusion:**
+Current parks.json data is placeholder and undercounts parks by 2–20x. Real spatial integration with OSM and LGA registers is required for production accuracy.
+
 
 **Date:** February 20, 2026  
 **Status:** SYNTHETIC DATA - Real LGA verification needed

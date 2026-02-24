@@ -6,7 +6,7 @@
 const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
 
-const dbPath = path.join(process.cwd(), 'suburbs.db');
+const dbPath = path.join(__dirname, '../suburbs.db');
 
 /**
  * Get all suburbs for dropdown with postcode, state, and SSC
@@ -19,14 +19,22 @@ function getAllSuburbsForDropdown(state = null) {
       
       let query = `
         SELECT DISTINCT 
-          s.ssc,
-          s.suburb_name,
-          s.state,
-          s.postcode,
-          sp.postcodes as all_postcodes
+          s.SAL_ID as ssc,
+          s.Suburb_Name as suburb_name,
+          s.State as state,
+          s.Postcode as postcode,
+          s.Population,
+          s.Median_Age,
+          s.Median_Income_Weekly,
+          s.Median_House_Price,
+          s.One_Year_Growth_Pct,
+          s.Median_Rent_Weekly,
+          s.School_Count,
+          s.Commute_Time_Mins,
+          s.Parks_Count,
+          s.Rental_Yield_Pct
         FROM suburbs s
-        LEFT JOIN suburb_postcodes sp ON s.ssc = sp.ssc
-        WHERE s.ssc IS NOT NULL
+        WHERE s.SAL_ID IS NOT NULL
       `;
       
       const params = [];
@@ -48,9 +56,19 @@ function getAllSuburbsForDropdown(state = null) {
           suburb_name: row.suburb_name,
           state: row.state,
           postcode: row.postcode,
-          all_postcodes: row.all_postcodes ? row.all_postcodes.split(',') : [row.postcode].filter(Boolean),
+          population: row.Population,
+          median_age: row.Median_Age,
+          median_income: row.Median_Income_Weekly,
+          median_house_price: row.Median_House_Price,
+          one_year_growth: row.One_Year_Growth_Pct,
+          median_rent: row.Median_Rent_Weekly,
+          school_count: row.School_Count,
+          commute_time: row.Commute_Time_Mins,
+          parks_count: row.Parks_Count,
+          rental_yield: row.Rental_Yield_Pct,
+          all_postcodes: [row.postcode].filter(Boolean),
           ssc: row.ssc,
-          searchText: `${row.suburb_name} ${row.state} ${row.postcode} ${row.all_postcodes || ''}`.toLowerCase()
+          searchText: `${row.suburb_name} ${row.state} ${row.postcode}`.toLowerCase()
         }));
         
         resolve(dropdownData);
@@ -69,25 +87,31 @@ function searchSuburbs(query, state = null) {
       
       let sql = `
         SELECT DISTINCT
-          s.ssc,
-          s.suburb_name,
-          s.state,
-          s.postcode,
-          sp.postcodes as all_postcodes
+          s.SAL_ID as ssc,
+          s.Suburb_Name as suburb_name,
+          s.State as state,
+          s.Postcode as postcode,
+          s.Population,
+          s.Median_Age,
+          s.Median_Income_Weekly,
+          s.Median_House_Price,
+          s.One_Year_Growth_Pct,
+          s.Median_Rent_Weekly,
+          s.School_Count,
+          s.Commute_Time_Mins,
+          s.Parks_Count,
+          s.Rental_Yield_Pct
         FROM suburbs s
-        LEFT JOIN suburb_postcodes sp ON s.ssc = sp.ssc
-        WHERE s.ssc IS NOT NULL
+        WHERE s.SAL_ID IS NOT NULL
         AND (
-          UPPER(s.suburb_name) LIKE ? 
-          OR s.postcode = ?
-          OR sp.postcodes LIKE ?
+          UPPER(s.Suburb_Name) LIKE ? 
+          OR s.Postcode = ?
         )
       `;
       
       const params = [
         `%${query.toUpperCase()}%`,
-        query,
-        `%${query}%`
+        query
       ];
       
       if (state) {
@@ -107,7 +131,17 @@ function searchSuburbs(query, state = null) {
           suburb_name: row.suburb_name,
           state: row.state,
           postcode: row.postcode,
-          all_postcodes: row.all_postcodes ? row.all_postcodes.split(',') : [row.postcode].filter(Boolean),
+          population: row.Population,
+          median_age: row.Median_Age,
+          median_income: row.Median_Income_Weekly,
+          median_house_price: row.Median_House_Price,
+          one_year_growth: row.One_Year_Growth_Pct,
+          median_rent: row.Median_Rent_Weekly,
+          school_count: row.School_Count,
+          commute_time: row.Commute_Time_Mins,
+          parks_count: row.Parks_Count,
+          rental_yield: row.Rental_Yield_Pct,
+          all_postcodes: [row.postcode].filter(Boolean),
           ssc: row.ssc
         }));
         

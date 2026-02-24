@@ -4,33 +4,26 @@
  * Provides count and information for urban amenities
  */
 
-const fs = require('fs');
-const path = require('path');
 
-let transportData = null;
-let parksData = null;
+const sqlite3 = require('sqlite3').verbose();
+const dbPath = path.join(__dirname, '../suburbs.db');
+let db = null;
 
 /**
  * Initialize amenity data from OSM sources
  */
 async function initializeAmenityData() {
   try {
-    const transportPath = path.join(__dirname, '../../data/osm/public_transport_stops.json');
-    const parksPath = path.join(__dirname, '../../data/osm/parks.json');
-    
-    if (fs.existsSync(transportPath)) {
-      transportData = JSON.parse(fs.readFileSync(transportPath, 'utf8'));
-      console.log(`[AMENITIES] Loaded transport stops data`);
-    }
-    
-    if (fs.existsSync(parksPath)) {
-      parksData = JSON.parse(fs.readFileSync(parksPath, 'utf8'));
-      console.log(`[AMENITIES] Loaded parks data`);
-    }
+    db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
+      if (err) {
+        console.error('[AMENITIES] Failed to connect to suburbs.db:', err.message);
+      } else {
+        console.log('[AMENITIES] Connected to suburbs.db');
+      }
+    });
   } catch (err) {
-    console.error('[AMENITIES] Failed to initialize amenity data:', err.message);
-    transportData = {};
-    parksData = {};
+    console.error('[AMENITIES] Failed to initialize amenity db:', err.message);
+    db = null;
   }
 }
 
@@ -41,33 +34,21 @@ async function initializeAmenityData() {
  * @returns {object} Transport metric
  */
 function getPublicTransportStops(suburbName, state) {
-  if (!transportData) {
-    return {
-      value: 0,
-      source: 'TripView (Data unavailable)',
-      datasetYear: 2025,
-      type: 'derived_metric'
-    };
-  }
-  
-  const key = `${suburbName}|${state}`;
-  const value = transportData[key] || transportData[suburbName];
-  
-  if (value === undefined || value === null) {
-    return {
-      value: 0,
-      source: 'TripView (Estimate)',
-      datasetYear: 2025,
-      type: 'derived_metric'
-    };
-  }
-  
-  return {
-    value: value,
-    source: 'TripView / Public Transport Registers',
-    datasetYear: 2025,
-    type: 'official_dataset'
-  };
+  return new Promise((resolve, reject) => {
+    if (!db) return resolve({ value: 0, source: 'TripView (Data unavailable)', datasetYear: 2025, type: 'derived_metric' });
+    const query = `SELECT Transport_Stops FROM suburbs WHERE Suburb_Name = ? AND State = ?`;
+    db.get(query, [suburbName, state], (err, row) => {
+      if (err || !row) {
+        return resolve({ value: 0, source: 'TripView (Estimate)', datasetYear: 2025, type: 'derived_metric' });
+      }
+      resolve({
+        value: row.Transport_Stops,
+        source: 'TripView / Public Transport Registers',
+        datasetYear: 2025,
+        type: 'official_dataset'
+      });
+    });
+  });
 }
 
 /**
@@ -77,39 +58,23 @@ function getPublicTransportStops(suburbName, state) {
  * @returns {object} Parks metric
  */
 function getParksCount(suburbName, state) {
-  if (!parksData) {
-    return {
-      value: 0,
-      source: 'OSM (Data unavailable)',
-      datasetYear: 2026,
-      type: 'derived_metric',
-      dataQualityConfidence: 0,
-      dataQualityNote: 'Parks data unavailable'
-    };
-  }
-  
-  const key = `${suburbName}|${state}`;
-  const value = parksData[key] || parksData[suburbName];
-  
-  if (value === undefined || value === null) {
-    return {
-      value: 0,
-      source: 'Population-density estimate',
-      datasetYear: 2026,
-      type: 'derived_metric',
-      dataQualityConfidence: 35,
-      dataQualityNote: 'Parks data is synthetic estimate pending LGA register integration'
-    };
-  }
-  
-  return {
-    value: value,
-    source: 'Local Government Authority Parks Registers',
-    datasetYear: 2026,
-    type: 'official_dataset',
-    dataQualityConfidence: 85,
-    dataQualityNote: 'Official LGA parks register data'
-  };
+  return new Promise((resolve, reject) => {
+    if (!db) return resolve({ value: 0, source: 'OSM (Data unavailable)', datasetYear: 2026, type: 'derived_metric', dataQualityConfidence: 0, dataQualityNote: 'Parks data unavailable' });
+    const query = `SELECT Parks_Count FROM suburbs WHERE Suburb_Name = ? AND State = ?`;
+    db.get(query, [suburbName, state], (err, row) => {
+      if (err || !row) {
+        return resolve({ value: 0, source: 'Population-density estimate', datasetYear: 2026, type: 'derived_metric', dataQualityConfidence: 35, dataQualityNote: 'Parks data is synthetic estimate pending LGA register integration' });
+      }
+      resolve({
+        value: row.Parks_Count,
+        source: 'Local Government Authority Parks Registers',
+        datasetYear: 2026,
+        type: 'official_dataset',
+        dataQualityConfidence: 85,
+        dataQualityNote: 'Official LGA parks register data'
+      });
+    });
+  });
 }
 
 /**

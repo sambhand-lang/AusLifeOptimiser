@@ -27,7 +27,7 @@ import { StampDutyCalculator } from '@/components/calculators/StampDutyCalculato
 import { BorrowingPowerCalculator } from '@/components/calculators/BorrowingPowerCalculator';
 import { SavingsCalculator } from '@/components/calculators/SavingsCalculator';
 import { TaxCalculator } from '@/components/calculators/TaxCalculator';
-import { SuburbComparison } from '@/components/calculators/SuburbComparison';
+import { SuburbComparison2 } from '@/components/calculators/SuburbComparison2';
 import './App.css';
 
 type CalculatorType = 'home' | 'stampduty' | 'borrowing' | 'savings' | 'tax' | 'suburb';
@@ -153,7 +153,7 @@ function App() {
       case 'tax':
         return <TaxCalculator />;
       case 'suburb':
-        return <SuburbComparison />;
+        return <SuburbComparison2 />;
       default:
         return null;
     }

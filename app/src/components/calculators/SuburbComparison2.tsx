@@ -1,16 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Search, X, Car, Users, Info, TreePine, Bus } from 'lucide-react';
+import { MapPin, Car, Users, Info, TreePine, Bus } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
-import { Label } from '@/components/ui/label';
-import { Input } from '@/components/ui/input';
-import { Command, CommandEmpty, CommandList } from '@/components/ui/command';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
-// charts removed — only display verified metrics
+import { SearchableSuburbSelector } from './SearchableSuburbSelector';
 
-type Metric = {
+// Type definitions
+ type Metric = {
   value: number;
   source: string;
   datasetYear: number;
@@ -40,134 +36,7 @@ type SuburbData = {
   lastUpdated?: string | null;
 };
 
-type SearchableSuburbSelectorProps = {
-  selectedSuburb: string;
-  onSuburbChange: (suburb: string) => void;
-  label: string;
-};
-
-function SearchableSuburbSelector({ selectedSuburb, onSuburbChange, label }: SearchableSuburbSelectorProps) {
-  const [open, setOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [suburbs, setSuburbs] = useState<SuburbData[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedSuburbData, setSelectedSuburbData] = useState<SuburbData | null>(null);
-
-  useEffect(() => {
-    if (selectedSuburb) {
-      setLoading(true);
-      const parts = selectedSuburb.includes('|') ? selectedSuburb.split('|') : [selectedSuburb];
-      const suburbanName = parts[0]?.trim() || '';
-      const postcode = parts[1]?.trim() || null;
-      
-      if (!suburbanName) {
-        setSelectedSuburbData(null);
-        setLoading(false);
-        return;
-      }
-      
-      fetch(`/api/suburbs/search?query=${encodeURIComponent(suburbanName)}`)
-        .then(res => res.ok ? res.json() : Promise.reject())
-        .then(data => {
-          if (data.data?.length > 0) {
-            const chosen = postcode 
-              ? data.data.find((s: SuburbData) => String(s.postcode) === String(postcode)) || data.data[0]
-              : data.data[0];
-            setSelectedSuburbData(chosen);
-          } else {
-            setSelectedSuburbData(null);
-          }
-        })
-        .catch(() => setSelectedSuburbData(null))
-        .finally(() => setLoading(false));
-    } else {
-      setSelectedSuburbData(null);
-    }
-  }, [selectedSuburb]);
-
-  useEffect(() => {
-    if (searchQuery.trim().length < 2) {
-      setSuburbs([]);
-      return;
-    }
-    setLoading(true);
-    fetch(`/api/suburbs/search?query=${encodeURIComponent(searchQuery)}`)
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => {
-        const unique = Array.from(new Map(((data.data || []) as SuburbData[]).map((s) => [s.suburb_name, s])).values());
-        const sorted = unique.sort((a, b) => {
-          const aExact = a.suburb_name === searchQuery.toUpperCase() ? 0 : 1;
-          const bExact = b.suburb_name === searchQuery.toUpperCase() ? 0 : 1;
-          return aExact !== bExact ? aExact - bExact : a.suburb_name.localeCompare(b.suburb_name);
-        });
-        setSuburbs(sorted);
-      })
-      .catch(() => setSuburbs([]))
-      .finally(() => setLoading(false));
-  }, [searchQuery]);
-
-  const handleSelect = (suburb: string, postcode?: string) => {
-    onSuburbChange(postcode ? `${suburb}|${postcode}` : suburb);
-    setOpen(false);
-    setSearchQuery('');
-  };
-
-  return (
-    <div className="space-y-2">
-      <Label className="text-sm font-semibold text-gray-700">{label}</Label>
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="w-full justify-between border-emerald-300 hover:border-emerald-500">
-            {selectedSuburbData ? (
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-emerald-600" />
-                <span>{selectedSuburbData.suburb_name} ({selectedSuburbData.postcode})</span>
-              </div>
-            ) : (
-              <span className="text-gray-500 flex items-center gap-2">
-                <Search className="h-4 w-4" />
-                Search suburb...
-              </span>
-            )}
-            {selectedSuburbData && <X className="h-4 w-4 cursor-pointer" onClick={(e) => { e.stopPropagation(); onSuburbChange(''); }} />}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[300px] p-0" align="start">
-          <Command shouldFilter={false}>
-            <div className="flex items-center border-b px-3 py-2 bg-emerald-50">
-              <Search className="h-4 w-4 text-emerald-600 mr-2" />
-              <Input
-                placeholder="Type suburb name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="border-0 focus:ring-0 bg-transparent"
-              />
-            </div>
-            <CommandList>
-              {loading && <CommandEmpty>Loading...</CommandEmpty>}
-              {searchQuery && !loading && suburbs.length === 0 && <CommandEmpty>No suburbs found</CommandEmpty>}
-              {!searchQuery && <CommandEmpty className="text-xs text-gray-500 py-4">Start typing...</CommandEmpty>}
-              {suburbs.map((suburb) => (
-                <div
-                  key={suburb.suburb_name + suburb.postcode}
-                  className="px-3 py-2 cursor-pointer hover:bg-emerald-100 border-b transition-colors"
-                  onClick={() => handleSelect(suburb.suburb_name, suburb.postcode)}
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{suburb.suburb_name}</span>
-                    <Badge className="text-xs bg-emerald-600">{suburb.postcode}</Badge>
-                  </div>
-                </div>
-              ))}
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    </div>
-  );
-}
-
-export function SuburbComparison() {
+export function SuburbComparison2() {
   const [suburb1, setSuburb1] = useState('');
   const [suburb2, setSuburb2] = useState('');
   const [suburb3, setSuburb3] = useState('');
@@ -184,13 +53,13 @@ export function SuburbComparison() {
     const suburbanName = parts[0]?.trim() || '';
     const postcode = parts[1]?.trim() || null;
 
-    fetch(`/api/suburbs/search?query=${encodeURIComponent(suburbanName)}`)
+    fetch(`/api/dropdowns/search?q=${encodeURIComponent(suburbanName)}`)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
-        if (data.data?.length > 0) {
+        if (data.results?.length > 0) {
           const chosen = postcode 
-            ? data.data.find((s: SuburbData) => String(s.postcode) === String(postcode)) || data.data[0]
-            : data.data[0];
+            ? data.results.find((s: SuburbData) => String(s.postcode) === String(postcode)) || data.results[0]
+            : data.results[0];
           return fetch(`/api/suburbs/${chosen.id}/details`);
         }
         return Promise.reject();
@@ -204,12 +73,9 @@ export function SuburbComparison() {
   useEffect(() => { fetchSuburb(suburb2, setS2); }, [suburb2]);
   useEffect(() => { fetchSuburb(suburb3, setS3); }, [suburb3]);
 
-  // Accept both the new strict metric objects and legacy numeric shapes from the running backend.
   const formatMetric = (metric?: any | null, metricType?: string) => {
     if (metric == null) return { display: 'Data not available', meta: null, badge: null };
-    // legacy numeric
     if (typeof metric === 'number') {
-      // Handle employment rate in decimal format (convert to percentage)
       const displayValue = metricType === 'employmentRate' && metric < 1 
         ? (metric * 100).toFixed(1) 
         : typeof metric === 'number' && metric % 1 === 0 
@@ -217,17 +83,14 @@ export function SuburbComparison() {
           : metric.toFixed(1);
       return { display: displayValue, meta: null, badge: null };
     }
-    // strict metric object
     if (typeof metric === 'object' && metric.value != null) {
       let displayValue = metric.value;
-      // Handle employment rate in decimal format (defensive)
       if (metricType === 'employmentRate' && displayValue < 1) {
         displayValue = displayValue * 100;
       }
       const display = typeof displayValue === 'number' 
         ? (displayValue % 1 !== 0 ? displayValue.toFixed(1) : displayValue.toLocaleString())
         : Number(displayValue).toLocaleString();
-      
       const meta = metric.source ? `${metric.source}${metric.datasetYear ? ` (${metric.datasetYear})` : ''}` : null;
       const isOfficial = metric.source?.includes('ABS Census');
       const badge = isOfficial ? 'official' : metric.source?.includes('Estimate') || !metric.source ? 'estimate' : 'derived';
@@ -250,10 +113,7 @@ export function SuburbComparison() {
       derived: 'ⓘ Derived',
       lowConfidence: '⚠ Low Confidence'
     };
-    
-    // Check for low data quality confidence
     const hasLowConfidence = metric?.dataQualityConfidence && metric.dataQualityConfidence < 50;
-    
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="text-lg font-bold text-emerald-700">{formatted.display}</div>
@@ -274,55 +134,15 @@ export function SuburbComparison() {
     );
   };
 
-  const getPopulationMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    return s.realTimeData.population ?? (s.realTimeData as any).population ?? null;
-  };
-
-  const getMedianAgeMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    return (s.realTimeData as any).medianAge ?? null;
-  };
-
-  const getHouseholdSizeMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    return (s.realTimeData as any).householdSize ?? null;
-  };
-
-  const getEmploymentRateMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    return (s.realTimeData as any).employmentRate ?? null;
-  };
-
-  const getMedianIncomeMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    return (s.realTimeData as any).medianIncome ?? null;
-  };
-
-  const getCommuteMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    // Accept both new backend (value) and legacy keys
-    if ((s.realTimeData as any).commute?.value !== undefined) return (s.realTimeData as any).commute.value;
-    return (s.realTimeData as any).commute?.drivingTimeMinutes ?? (s.realTimeData as any).commuteTime ?? (s.realTimeData as any).commuteMinutes ?? null;
-  };
-
-  const getSchoolCountMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    if ((s.realTimeData as any).schools?.value !== undefined) return (s.realTimeData as any).schools.value;
-    return (s.realTimeData as any).schools?.count ?? (s.realTimeData as any).schoolCount ?? null;
-  };
-
-  const getPublicTransportStopsMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    // Accept both new backend (value) and legacy keys
-    if ((s.realTimeData as any).transport?.value !== undefined) return (s.realTimeData as any).transport.value;
-    return (s.realTimeData as any).publicTransportStops ?? (s.realTimeData as any).transport ?? null;
-  };
-
-  const getParksMetric = (s: SuburbData | null) => {
-    if (!s || !s.realTimeData) return null;
-    return (s.realTimeData as any).parks ?? null;
-  };
+  const getPopulationMetric = (s: SuburbData | null) => s?.realTimeData?.population ?? null;
+  const getMedianAgeMetric = (s: SuburbData | null) => s?.realTimeData?.medianAge ?? null;
+  const getHouseholdSizeMetric = (s: SuburbData | null) => s?.realTimeData?.householdSize ?? null;
+  const getEmploymentRateMetric = (s: SuburbData | null) => s?.realTimeData?.employmentRate ?? null;
+  const getMedianIncomeMetric = (s: SuburbData | null) => s?.realTimeData?.medianIncome ?? null;
+  const getCommuteMetric = (s: SuburbData | null) => s?.realTimeData?.commute?.drivingTimeMinutes ?? null;
+  const getSchoolCountMetric = (s: SuburbData | null) => s?.realTimeData?.schools?.count ?? null;
+  const getPublicTransportStopsMetric = (s: SuburbData | null) => s?.realTimeData?.publicTransportStops ?? null;
+  const getParksMetric = (s: SuburbData | null) => s?.realTimeData?.parks ?? null;
 
   return (
     <TooltipProvider>
@@ -413,7 +233,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-purple-600" />
@@ -432,7 +251,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-rose-600" />
@@ -451,7 +269,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-amber-600" />
@@ -470,7 +287,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-green-600" />
@@ -489,7 +305,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Car className="h-4 w-4 text-blue-600" />
@@ -508,7 +323,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-indigo-600" />
@@ -527,7 +341,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Bus className="h-4 w-4 text-purple-600" />
@@ -546,7 +359,6 @@ export function SuburbComparison() {
                           );
                         })()}
                       </tr>
-
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <TreePine className="h-4 w-4 text-green-600" />
@@ -571,10 +383,8 @@ export function SuburbComparison() {
               </CardContent>
             </Card>
 
-            {/* Charts removed — only show verified metrics in table */}
-
             {/* Info */}
-            <div className="bg-emerald-50 border-l-4 border-emerald-600 rounded-lg p-4">
+            <div className="bg-emerald-50 border-l-4 border-emerald-600 rounded-lg p-4 mt-6">
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-1" />
                 <div className="text-sm text-gray-700">

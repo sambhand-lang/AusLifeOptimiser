@@ -4,29 +4,26 @@
  * Provides distance calculations and location utilities
  */
 
-const fs = require('fs');
-const path = require('path');
-const censusService = require('./censusService');
-const schoolService = require('./schoolService');
-const amenityService = require('./amenityService');
-// commuteService is required dynamically inside functions to avoid circular requires
 
-let coordinateData = null;
+const sqlite3 = require('sqlite3').verbose();
+const dbPath = path.join(__dirname, '../suburbs.db');
+let db = null;
 
 /**
  * Initialize coordinate data
  */
 async function initializeGeoData() {
   try {
-    const coordPath = path.join(__dirname, '../../data/abs/coordinates.json');
-    
-    if (fs.existsSync(coordPath)) {
-      coordinateData = JSON.parse(fs.readFileSync(coordPath, 'utf8'));
-      console.log(`[GEO] Loaded coordinates for ${Object.keys(coordinateData).length} locations`);
-    }
+    db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
+      if (err) {
+        console.error('[GEO] Failed to connect to suburbs.db:', err.message);
+      } else {
+        console.log('[GEO] Connected to suburbs.db');
+      }
+    });
   } catch (err) {
-    console.error('[GEO] Failed to initialize geo data:', err.message);
-    coordinateData = {};
+    console.error('[GEO] Failed to initialize geo db:', err.message);
+    db = null;
   }
 }
 
@@ -59,14 +56,16 @@ function haversineDistance(lat1, lon1, lat2, lon2) {
  * @returns {object} Coordinate object {lat, lon}
  */
 function getSuburbCentroid(suburbName, state) {
-  if (!coordinateData) {
-    return { lat: -33.8688, lon: 151.2093 }; // Default to Sydney CBD
-  }
-  
-  const key = `${suburbName}|${state}`;
-  const coords = coordinateData[key] || coordinateData[suburbName];
-  
-  return coords || { lat: -33.8688, lon: 151.2093 }; // Fallback to Sydney CBD
+  return new Promise((resolve, reject) => {
+    if (!db) return resolve({ lat: -33.8688, lon: 151.2093 });
+    const query = `SELECT Latitude, Longitude FROM suburbs WHERE Suburb_Name = ? AND State = ?`;
+    db.get(query, [suburbName, state], (err, row) => {
+      if (err || !row) {
+        return resolve({ lat: -33.8688, lon: 151.2093 });
+      }
+      resolve({ lat: row.Latitude, lon: row.Longitude });
+    });
+  });
 }
 
 /**
