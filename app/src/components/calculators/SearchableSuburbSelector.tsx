@@ -48,7 +48,7 @@ export function SearchableSuburbSelector({ selectedSuburb, onSuburbChange, label
     setLoading(true);
     fetch(`/api/dropdowns/search?q=${encodeURIComponent(searchQuery)}`)
       .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => setSuburbs(data.results || []))
+      .then(data => setSuburbs(data || []))
       .catch(() => setSuburbs([]))
       .finally(() => setLoading(false));
   }, [searchQuery]);
