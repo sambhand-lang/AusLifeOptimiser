@@ -28,7 +28,7 @@ try {
   console.error('dropdownService.ts: error checking suburbs.db existence:', e);
 }
 
-// TypeScript types
+// --- TypeScript type for suburb row ---
 export interface SuburbRow {
   SAL_ID: string;
   Suburb_Name: string;
@@ -78,7 +78,7 @@ export interface DropdownItem {
  */
 export function getAllSuburbsForDropdown(state?: string): Promise<DropdownItem[]> {
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath, err => {
+    db.all(sql, [qParam, query], (err: Error | null, rows: SuburbRow[]) => {
       if (err) return reject(err);
 
       let sql = `
@@ -230,7 +230,7 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
  */
 export function getSuburbWithPostcodes(ssc: string): Promise<DropdownItem & { display: string, all_postcodes: string[] } | null> {
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(dbPath, err => {
+    db.all(sql, [], (err: Error | null, rows: SuburbRow[]) => {
       if (err) return reject(err);
 
       db.get(`

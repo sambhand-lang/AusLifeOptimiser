@@ -86,6 +86,115 @@ router.get('/by-city', async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch suburbs by city' });
     }
 });
+
+// GET /api/suburbs/details?name=...&postcode=...
+router.get('/details', async (req, res) => {
+    try {
+        const name = req.query.name;
+        const postcode = req.query.postcode;
+
+        if (!name) {
+            return res.status(400).json({ error: 'Suburb name is required' });
+        }
+
+        // Lookup suburb by name + optional postcode
+        let sql = `
+            SELECT * FROM suburbs
+            WHERE suburb_name = ?
+        `;
+        const params: any[] = [name.toUpperCase()];
+
+        if (postcode) {
+            sql += ` AND postcode = ?`;
+            params.push(postcode);
+        }
+
+        sql += ` LIMIT 1`;
+
+        const result = await query(sql, params);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ error: 'Suburb not found' });
+        }
+
+        const suburb = result.rows[0];
+
+        // ---- REUSE EXISTING LOGIC ----
+
+        const absMetrics = await ExternalDataService.getAbsMetrics(
+            suburb.suburb_name,
+            suburb.state
+        );
+
+        if (!absMetrics.population) {
+            return res.status(404).json({ error: 'Suburb not found in ABS dataset' });
+        }
+
+        const realData = await ExternalDataService.getSuburbRealData(
+            suburb.suburb_name,
+            suburb.state,
+            suburb.postcode
+        );
+
+        const normalized: any = {};
+        const sources: string[] = [];
+
+        // ---- COPY SAME NORMALIZATION YOU ALREADY USE ----
+
+        if (realData.population) {
+            normalized.population = realData.population;
+            if (realData.population.source) sources.push(realData.population.source);
+        }
+
+        if (realData.medianAge) {
+            normalized.medianAge = realData.medianAge;
+            if (realData.medianAge.source) sources.push(realData.medianAge.source);
+        }
+
+        if (realData.medianIncome) {
+            normalized.medianIncome = realData.medianIncome;
+            if (realData.medianIncome.source) sources.push(realData.medianIncome.source);
+        }
+
+        if (realData.commute?.drivingTimeMinutes?.value != null) {
+            normalized.commute = {
+                drivingTimeMinutes: realData.commute.drivingTimeMinutes
+            };
+            if (realData.commute.drivingTimeMinutes.source)
+                sources.push(realData.commute.drivingTimeMinutes.source);
+        }
+
+        if (realData.schools?.count?.value != null) {
+            normalized.schools = {
+                count: realData.schools.count
+            };
+            if (realData.schools.count.source)
+                sources.push(realData.schools.count.source);
+        }
+
+        if (realData.parks?.value != null) {
+            normalized.parks = realData.parks;
+            if (realData.parks.source)
+                sources.push(realData.parks.source);
+        }
+
+        const uniqueSources = Array.from(new Set(sources));
+
+        res.json({
+            ...suburb,
+            realTimeData: normalized,
+            dataSource: uniqueSources.length
+                ? uniqueSources.join(', ')
+                : 'ABS',
+            lastUpdated: new Date().toISOString()
+        });
+
+    } catch (err) {
+        console.error('Error fetching suburb by name:', err);
+        res.status(500).json({ error: 'Failed to fetch suburb details' });
+    }
+});
+
 // GET /api/suburbs/:id/details - Get detailed suburb data with real-time metrics
 router.get('/:id/details', async (req, res) => {
     try {
