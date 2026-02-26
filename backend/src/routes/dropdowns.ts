@@ -12,6 +12,7 @@ router.get('/suburbs', async (req: Request, res: Response) => {
   }
 
   try {
+<<<<<<< HEAD
     const query = req.query.q as string;
     const state = req.query.state as string | undefined;
 
@@ -24,6 +25,10 @@ router.get('/suburbs', async (req: Request, res: Response) => {
     const results = await searchSuburbs(query, state);
     console.log('searchSuburbs returned', Array.isArray(results) ? results.length + ' items' : typeof results);
     res.json({ results });
+=======
+    const results = await searchSuburbs(query);
+    res.json(results);
+>>>>>>> 98609b9fd53b82fd97251e632d6a18a9c56b8b21
   } catch (err: any) {
     console.error('Error searching suburbs:', err);
     res.status(500).json({ message: 'Internal server error', error: err.message });
