@@ -1,40 +1,14 @@
-console.log("DB ABSOLUTE PATH:", require("path").resolve("suburbs.db"));
-console.log("CWD:", process.cwd());
-// --- BEGIN DEBUG LOGGING ---
-console.log('dropdownService.ts: module load started');
-try {
-  require('fs').appendFileSync('test.log', 'dropdownService.ts: module load started\n');
-} catch (e) {
-  console.error('dropdownService.ts: failed to write test.log:', e);
-}
-// --- END DEBUG LOGGING ---
+import sqlite3 from 'sqlite3';
+import path from 'path';
+import fs from 'fs';
+
+let dbPath = path.resolve(__dirname, '../../suburbs.db');
+let logPath = path.resolve(__dirname, '../logs/backend.log');
+let logMsg: string;
+
 console.log('dropdownService.ts: DB absolute path:', dbPath);
-// TEST LOGGING: This should appear in console and file if this file is loaded at all
 try {
-  require('fs').appendFileSync('test.log', 'DROPDOWN SERVICE MODULE LOADED\n');
-  console.log('DROPDOWN SERVICE MODULE LOADED');
-} catch (e) {
-  console.error('Failed to write test.log:', e);
-}
-// src/services/dropdownService.ts
-/**
- * Suburbs Dropdown Service
- * Provides cached, fast lookups for suburb dropdowns with complete data
- */
-
-console.log('dropdownService.ts: importing sqlite3 and path');
-let sqlite3, path;
-try {
-  sqlite3 = require('sqlite3');
-  path = require('path');
-  require('fs').appendFileSync('test.log', 'dropdownService.ts: imported sqlite3 and path\n');
-} catch (e) {
-  console.error('dropdownService.ts: failed to import sqlite3 or path:', e);
-}
-
-let dbPath, logPath, logMsg;
-try {
-  dbPath = path.resolve(__dirname, '../suburbs.db');
+  dbPath = path.resolve(__dirname, '../../suburbs.db');
   console.log('DROPDOWN SERVICE: Using suburbs.db at:', dbPath);
   logPath = path.resolve(__dirname, '../logs/backend.log');
   logMsg = `[DROPDOWN SERVICE] Using suburbs.db at: ${dbPath}\nDB PATH: ${dbPath}`;
@@ -58,6 +32,7 @@ try {
 export interface SuburbRow {
   SAL_ID: string;
   Suburb_Name: string;
+  SAL_CODE_2021: string;
   State: string;
   Postcode: string;
   Population: number;
@@ -66,6 +41,8 @@ export interface SuburbRow {
   Median_House_Price: number;
   One_Year_Growth_Pct: number;
   Median_Rent_Weekly: number;
+  HH_Size: number;
+  Employment_Rate: number;
   School_Count: number;
   Commute_Time_Mins: number;
   Parks_Count: number;
@@ -76,6 +53,7 @@ export interface DropdownItem {
   id: string;
   label: string;
   suburb_name: string;
+  sal_code_2021: string;
   state: string;
   postcode: string;
   population: number;
@@ -84,6 +62,8 @@ export interface DropdownItem {
   median_house_price: number;
   one_year_growth: number;
   median_rent: number;
+  hh_size: number;
+  employment_rate: number;
   school_count: number;
   commute_time: number;
   parks_count: number;
@@ -105,6 +85,7 @@ export function getAllSuburbsForDropdown(state?: string): Promise<DropdownItem[]
         SELECT DISTINCT
           s.SAL_ID,
           s.Suburb_Name,
+          s.SAL_CODE_2021,
           s.State,
           s.Postcode,
           s.Population,
@@ -113,11 +94,14 @@ export function getAllSuburbsForDropdown(state?: string): Promise<DropdownItem[]
           s.Median_House_Price,
           s.One_Year_Growth_Pct,
           s.Median_Rent_Weekly,
+          s.HH_Size,
+          sd.employment_rate AS Employment_Rate,
           s.School_Count,
           s.Commute_Time_Mins,
           s.Parks_Count,
           s.Rental_Yield_Pct
         FROM suburbs s
+        LEFT JOIN suburb_demographics sd ON s.SAL_ID = 'SAL' || sd.ssc
         WHERE s.SAL_ID IS NOT NULL
       `;
       const params: string[] = [];
@@ -135,6 +119,7 @@ export function getAllSuburbsForDropdown(state?: string): Promise<DropdownItem[]
           id: row.SAL_ID,
           label: `${row.Suburb_Name}, ${row.State} ${row.Postcode}`,
           suburb_name: row.Suburb_Name,
+          sal_code_2021: row.SAL_CODE_2021,
           state: row.State,
           postcode: row.Postcode,
           population: row.Population,
@@ -143,6 +128,8 @@ export function getAllSuburbsForDropdown(state?: string): Promise<DropdownItem[]
           median_house_price: row.Median_House_Price,
           one_year_growth: row.One_Year_Growth_Pct,
           median_rent: row.Median_Rent_Weekly,
+          hh_size: row.HH_Size,
+          employment_rate: row.Employment_Rate,
           school_count: row.School_Count,
           commute_time: row.Commute_Time_Mins,
           parks_count: row.Parks_Count,
@@ -172,6 +159,7 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
         SELECT DISTINCT
           s.SAL_ID,
           s.Suburb_Name,
+          s.SAL_CODE_2021,
           s.State,
           s.Postcode,
           s.Population,
@@ -180,11 +168,14 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
           s.Median_House_Price,
           s.One_Year_Growth_Pct,
           s.Median_Rent_Weekly,
+          s.HH_Size,
+          sd.employment_rate AS Employment_Rate,
           s.School_Count,
           s.Commute_Time_Mins,
           s.Parks_Count,
           s.Rental_Yield_Pct
         FROM suburbs s
+        LEFT JOIN suburb_demographics sd ON s.SAL_ID = 'SAL' || sd.ssc
         WHERE s.SAL_ID IS NOT NULL
           AND (
             UPPER(s.Suburb_Name) LIKE ?
@@ -209,6 +200,7 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
           id: row.SAL_ID,
           label: `${row.Suburb_Name}, ${row.State} ${row.Postcode}`,
           suburb_name: row.Suburb_Name,
+          sal_code_2021: row.SAL_CODE_2021,
           state: row.State,
           postcode: row.Postcode,
           population: row.Population,
@@ -217,6 +209,8 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
           median_house_price: row.Median_House_Price,
           one_year_growth: row.One_Year_Growth_Pct,
           median_rent: row.Median_Rent_Weekly,
+          hh_size: row.HH_Size,
+          employment_rate: row.Employment_Rate,
           school_count: row.School_Count,
           commute_time: row.Commute_Time_Mins,
           parks_count: row.Parks_Count,
@@ -243,11 +237,25 @@ export function getSuburbWithPostcodes(ssc: string): Promise<DropdownItem & { di
         SELECT 
           s.SAL_ID AS ssc,
           s.Suburb_Name AS suburb_name,
+          s.SAL_CODE_2021 AS sal_code_2021,
           s.State AS state,
           s.Postcode AS postcode,
+          s.Population AS population,
+          s.Median_Age AS median_age,
+          s.Median_Income_Weekly AS median_income,
+          s.Median_House_Price AS median_house_price,
+          s.One_Year_Growth_Pct AS one_year_growth,
+          s.Median_Rent_Weekly AS median_rent,
+          s.HH_Size AS hh_size,
+          sd.employment_rate AS employment_rate,
+          s.School_Count AS school_count,
+          s.Commute_Time_Mins AS commute_time,
+          s.Parks_Count AS parks_count,
+          s.Rental_Yield_Pct AS rental_yield,
           sp.postcodes AS all_postcodes
         FROM suburbs s
         LEFT JOIN suburb_postcodes sp ON s.SAL_ID = sp.ssc
+        LEFT JOIN suburb_demographics sd ON s.SAL_ID = 'SAL' || sd.ssc
         WHERE s.SAL_ID = ? LIMIT 1
       `, [ssc], (err, row: any) => {
         db.close();
@@ -266,10 +274,13 @@ export function getSuburbWithPostcodes(ssc: string): Promise<DropdownItem & { di
           median_house_price: row.median_house_price ?? 0,
           one_year_growth: row.one_year_growth ?? 0,
           median_rent: row.median_rent ?? 0,
+          hh_size: row.hh_size ?? 0,
+          employment_rate: row.employment_rate ?? 0,
           school_count: row.school_count ?? 0,
           commute_time: row.commute_time ?? 0,
           parks_count: row.parks_count ?? 0,
           rental_yield: row.rental_yield ?? 0,
+          sal_code_2021: row.sal_code_2021 ?? '',
           all_postcodes: row.all_postcodes ? row.all_postcodes.split(',') : [row.postcode].filter(Boolean),
           ssc: row.ssc,
           display: `${row.suburb_name}, ${row.state} ${row.postcode}`,

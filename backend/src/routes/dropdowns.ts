@@ -42,7 +42,7 @@ router.get('/search', async (req, res) => {
     console.log('Calling searchSuburbs with query:', query, 'state:', state);
     const results = await searchSuburbs(query, state);
     console.log('searchSuburbs returned', Array.isArray(results) ? results.length + ' items' : typeof results);
-    res.json(results);
+    res.json({ results });
   } catch (err: any) {
     console.error('Error searching suburbs:', err);
     if (err && err.stack) {

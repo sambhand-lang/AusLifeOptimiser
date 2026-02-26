@@ -15,6 +15,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 
 import dropdownRoutes from './routes/dropdowns';
+import suburbRoutes from './routes/suburbs';
 
 // Load environment variables
 dotenv.config();
@@ -73,6 +74,7 @@ app.use(express.json());
    Routes
 ====================================================== */
 app.use('/api/dropdowns', dropdownRoutes);
+app.use('/api/suburbs', suburbRoutes);
 
 // Health check
 app.get('/health', (req: Request, res: Response) => {

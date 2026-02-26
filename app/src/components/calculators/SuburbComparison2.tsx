@@ -1,12 +1,11 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { MapPin, Car, Users, Info, TreePine, Bus } from 'lucide-react';
+import { MapPin, Car, Users, Info, TreePine, Bus, Home, TrendingUp, Wallet, Percent } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SearchableSuburbSelector } from './SearchableSuburbSelector';
 
 // Type definitions
- type Metric = {
+type Metric = {
   value: number;
   source: string;
   datasetYear: number;
@@ -32,6 +31,19 @@ type SuburbData = {
     publicTransportStops?: Metric | null;
     parks?: Metric | null;
   } | null;
+  // Database fields from dropdownService
+  population?: number;
+  median_age?: number;
+  median_income?: number;
+  median_house_price?: number;
+  one_year_growth?: number;
+  median_rent?: number;
+  rental_yield?: number;
+  hh_size?: number;
+  employment_rate?: number;
+  school_count?: number;
+  commute_time?: number;
+  parks_count?: number;
   dataSource?: string | null;
   lastUpdated?: string | null;
 };
@@ -56,11 +68,12 @@ export function SuburbComparison2() {
     fetch(`/api/dropdowns/search?q=${encodeURIComponent(suburbanName)}`)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
-        if (data.results?.length > 0) {
-          const chosen = postcode 
-            ? data.results.find((s: SuburbData) => String(s.postcode) === String(postcode)) || data.results[0]
-            : data.results[0];
-          return fetch(`/api/suburbs/${chosen.id}/details`);
+        const results = data.results || (Array.isArray(data) ? data : []);
+        if (results.length > 0) {
+          const chosen = postcode
+            ? results.find((s: SuburbData) => String(s.postcode) === String(postcode)) || results[0]
+            : results[0];
+          return fetch(`/api/suburbs/${chosen.ssc || chosen.id}/details`);
         }
         return Promise.reject();
       })
@@ -75,28 +88,38 @@ export function SuburbComparison2() {
 
   const formatMetric = (metric?: any | null, metricType?: string) => {
     if (metric == null) return { display: 'Data not available', meta: null, badge: null };
+
+    let value: number;
+    let meta: string | null = null;
+    let badge: string | null = null;
+
     if (typeof metric === 'number') {
-      const displayValue = metricType === 'employmentRate' && metric < 1 
-        ? (metric * 100).toFixed(1) 
-        : typeof metric === 'number' && metric % 1 === 0 
-          ? metric.toLocaleString() 
-          : metric.toFixed(1);
-      return { display: displayValue, meta: null, badge: null };
-    }
-    if (typeof metric === 'object' && metric.value != null) {
-      let displayValue = metric.value;
-      if (metricType === 'employmentRate' && displayValue < 1) {
-        displayValue = displayValue * 100;
-      }
-      const display = typeof displayValue === 'number' 
-        ? (displayValue % 1 !== 0 ? displayValue.toFixed(1) : displayValue.toLocaleString())
-        : Number(displayValue).toLocaleString();
-      const meta = metric.source ? `${metric.source}${metric.datasetYear ? ` (${metric.datasetYear})` : ''}` : null;
+      value = metric;
+    } else if (typeof metric === 'object' && metric.value != null) {
+      value = metric.value;
+      meta = metric.source ? `${metric.source}${metric.datasetYear ? ` (${metric.datasetYear})` : ''}` : null;
       const isOfficial = metric.source?.includes('ABS Census');
-      const badge = isOfficial ? 'official' : metric.source?.includes('Estimate') || !metric.source ? 'estimate' : 'derived';
-      return { display, meta, badge };
+      badge = isOfficial ? 'official' : metric.source?.includes('Estimate') || !metric.source ? 'estimate' : 'derived';
+    } else {
+      return { display: 'Data not available', meta: null, badge: null };
     }
-    return { display: 'Data not available', meta: null, badge: null };
+
+    let display: string;
+    if (metricType === 'employmentRate') {
+      // Handle both decimal (0.95) and percentage (95) formats
+      const percentValue = value < 1 ? value * 100 : value;
+      display = `${percentValue.toFixed(1)}%`;
+    } else if (metricType === 'housePrice' || metricType === 'rent' || metricType === 'medianIncome') {
+      display = `$${Math.round(value).toLocaleString()}`;
+    } else if (metricType === 'growth' || metricType === 'yield') {
+      display = `${value.toFixed(1)}%`;
+    } else if (value % 1 === 0) {
+      display = value.toLocaleString();
+    } else {
+      display = value.toFixed(1);
+    }
+
+    return { display, meta, badge };
   };
 
   const renderMetricCell = (metric: any, metricType?: string) => {
@@ -134,15 +157,21 @@ export function SuburbComparison2() {
     );
   };
 
-  const getPopulationMetric = (s: SuburbData | null) => s?.realTimeData?.population ?? null;
-  const getMedianAgeMetric = (s: SuburbData | null) => s?.realTimeData?.medianAge ?? null;
-  const getHouseholdSizeMetric = (s: SuburbData | null) => s?.realTimeData?.householdSize ?? null;
-  const getEmploymentRateMetric = (s: SuburbData | null) => s?.realTimeData?.employmentRate ?? null;
-  const getMedianIncomeMetric = (s: SuburbData | null) => s?.realTimeData?.medianIncome ?? null;
-  const getCommuteMetric = (s: SuburbData | null) => s?.realTimeData?.commute?.drivingTimeMinutes ?? null;
-  const getSchoolCountMetric = (s: SuburbData | null) => s?.realTimeData?.schools?.count ?? null;
+  const getPopulationMetric = (s: SuburbData | null) => s?.realTimeData?.population ?? s?.population ?? null;
+  const getMedianAgeMetric = (s: SuburbData | null) => s?.realTimeData?.medianAge ?? s?.median_age ?? null;
+  const getHouseholdSizeMetric = (s: SuburbData | null) => s?.realTimeData?.householdSize ?? s?.hh_size ?? null;
+  const getEmploymentRateMetric = (s: SuburbData | null) => s?.realTimeData?.employmentRate ?? s?.employment_rate ?? null;
+  const getMedianIncomeMetric = (s: SuburbData | null) => s?.realTimeData?.medianIncome ?? s?.median_income ?? null;
+  const getCommuteMetric = (s: SuburbData | null) => s?.realTimeData?.commute?.drivingTimeMinutes ?? s?.commute_time ?? null;
+  const getSchoolCountMetric = (s: SuburbData | null) => s?.realTimeData?.schools?.count ?? s?.school_count ?? null;
   const getPublicTransportStopsMetric = (s: SuburbData | null) => s?.realTimeData?.publicTransportStops ?? null;
-  const getParksMetric = (s: SuburbData | null) => s?.realTimeData?.parks ?? null;
+  const getParksMetric = (s: SuburbData | null) => s?.realTimeData?.parks ?? s?.parks_count ?? null;
+
+  // Real Estate Metrics from Database
+  const getMedianHousePriceMetric = (s: SuburbData | null) => s?.median_house_price ?? null;
+  const getOneYearGrowthMetric = (s: SuburbData | null) => s?.one_year_growth ?? null;
+  const getMedianRentMetric = (s: SuburbData | null) => s?.median_rent ?? null;
+  const getRentalYieldMetric = (s: SuburbData | null) => s?.rental_yield ?? null;
 
   return (
     <TooltipProvider>
@@ -290,7 +319,7 @@ export function SuburbComparison2() {
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-green-600" />
-                          Median Income (AUD)
+                          Median Weekly Income
                         </td>
                         {(() => {
                           const a = getMedianIncomeMetric(s1);
@@ -377,6 +406,78 @@ export function SuburbComparison2() {
                           );
                         })()}
                       </tr>
+                      <tr className="border-b hover:bg-emerald-50">
+                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
+                          <Home className="h-4 w-4 text-orange-600" />
+                          Median House Price
+                        </td>
+                        {(() => {
+                          const a = getMedianHousePriceMetric(s1);
+                          const b = getMedianHousePriceMetric(s2);
+                          const c = s3 ? getMedianHousePriceMetric(s3) : null;
+                          return (
+                            <>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'housePrice')}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'housePrice')}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'housePrice')}</td>}
+                            </>
+                          );
+                        })()}
+                      </tr>
+                      <tr className="border-b hover:bg-emerald-50">
+                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
+                          <TrendingUp className="h-4 w-4 text-cyan-600" />
+                          1 Year Growth
+                        </td>
+                        {(() => {
+                          const a = getOneYearGrowthMetric(s1);
+                          const b = getOneYearGrowthMetric(s2);
+                          const c = s3 ? getOneYearGrowthMetric(s3) : null;
+                          return (
+                            <>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'growth')}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'growth')}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'growth')}</td>}
+                            </>
+                          );
+                        })()}
+                      </tr>
+                      <tr className="border-b hover:bg-emerald-50">
+                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
+                          <Wallet className="h-4 w-4 text-pink-600" />
+                          Median Rent (Weekly)
+                        </td>
+                        {(() => {
+                          const a = getMedianRentMetric(s1);
+                          const b = getMedianRentMetric(s2);
+                          const c = s3 ? getMedianRentMetric(s3) : null;
+                          return (
+                            <>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'rent')}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'rent')}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'rent')}</td>}
+                            </>
+                          );
+                        })()}
+                      </tr>
+                      <tr className="border-b hover:bg-emerald-50">
+                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
+                          <Percent className="h-4 w-4 text-teal-600" />
+                          Rental Yield
+                        </td>
+                        {(() => {
+                          const a = getRentalYieldMetric(s1);
+                          const b = getRentalYieldMetric(s2);
+                          const c = s3 ? getRentalYieldMetric(s3) : null;
+                          return (
+                            <>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'yield')}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'yield')}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'yield')}</td>}
+                            </>
+                          );
+                        })()}
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -403,7 +504,7 @@ export function SuburbComparison2() {
                       <span><strong>ⓘ Derived:</strong> Calculated metrics (routes, transport density, parks, schools)</span>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-gray-600 italic">9 metrics: Population, Age, Household Size, Employment, Income, Commute, Schools, Transport Stops, Parks</p>
+                  <p className="mt-2 text-xs text-gray-600 italic">13 metrics: Population, Age, Household Size, Employment, Income, Commute, Schools, Transport Stops, Parks, House Price, Growth, Rent, Yield</p>
                 </div>
               </div>
             </div>

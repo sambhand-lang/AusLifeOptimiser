@@ -1,4 +1,3 @@
-<!doctype html>
 <html lang="en">
 	<head>
 	<meta charset="utf-8">
@@ -10,6 +9,11 @@
 		header{display:flex;align-items:center;gap:12px}
 		.brand{width:44px;height:44px;border-radius:8px;background:linear-gradient(135deg,var(--aus-green),#004a2e);display:flex;align-items:center;justify-content:center;color:white;font-weight:700}
 		h1{color:var(--aus-green);margin-top:6px}
+		.top-menu {display:flex;align-items:center;gap:18px;padding:12px 0;margin-bottom:24px;border-bottom:1px solid #e6efe9;background:var(--bg);}
+		.top-menu a {color:var(--aus-green);text-decoration:none;font-weight:600;padding:6px 12px;border-radius:6px;transition:background .2s;}
+		.top-menu a:hover {background:var(--aus-gold);color:#043023;}
+		.brand-logo {width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--aus-green),#004a2e);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;font-size:1.2em;margin-right:8px;}
+<body>
 		a.home{color:var(--aus-green);text-decoration:none;font-weight:600}
 		.pill{display:inline-block;padding:6px 10px;background:var(--aus-gold);border-radius:6px;color:#043023;font-weight:600}
 		h2{margin-top:18px;color:#04423a}
@@ -17,6 +21,17 @@
 	</style>
 </head>
 <body>
+		<nav class="top-menu">
+			<span class="brand-logo">AUS</span>
+			<a href="/index.html">Home</a>
+			<a href="/calculators.html">Calculators</a>
+			<a href="/legal/privacy.html">Privacy</a>
+			<a href="/legal/terms.html">Terms</a>
+			<a href="/legal/disclaimer.html">Disclaimer</a>
+			<a href="/legal/property-market.html">Property Market</a>
+			<a href="/legal/interest-rates.html">Interest Rates</a>
+			<a href="/legal/first-home-buyer.html">First Home Buyer</a>
+		</nav>
 	<h1>Privacy Policy</h1>
 	<p>Last updated: February 2026</p>
 

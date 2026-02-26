@@ -70,7 +70,7 @@ let suburbPublicTransport: Record<string, number> | null = null;
 let suburbParks: Record<string, number> | null = null;
 
 try {
-  const absPath = path.resolve(__dirname, '..', 'data', 'abs_census_by_suburb_expanded.json');
+  const absPath = path.resolve(__dirname, '..', 'data', 'abs', 'abs_census_by_suburb_expanded.json');
   if (fs.existsSync(absPath)) {
     const raw = fs.readFileSync(absPath, 'utf8');
     absIndex = JSON.parse(raw);
@@ -78,7 +78,7 @@ try {
   } else {
     console.warn('ABS census preload file not found at', absPath);
     // Fall back to original file if expanded not found
-    const fallbackPath = path.resolve(__dirname, '..', 'data', 'abs_census_by_suburb.json');
+    const fallbackPath = path.resolve(__dirname, '..', 'data', 'abs', 'abs_census_by_suburb.json');
     if (fs.existsSync(fallbackPath)) {
       const raw = fs.readFileSync(fallbackPath, 'utf8');
       absIndex = JSON.parse(raw);
@@ -91,7 +91,7 @@ try {
 
 // Load SA2-level ABS metrics (for multi-SA2 aggregation)
 try {
-  const sa2Path = path.resolve(__dirname, '..', 'data', 'abs_census_by_sa2.json');
+  const sa2Path = path.resolve(__dirname, '..', 'data', 'abs', 'abs_census_by_sa2.json');
   if (fs.existsSync(sa2Path)) {
     const raw = fs.readFileSync(sa2Path, 'utf8');
     absIndexBySA2 = JSON.parse(raw);
@@ -311,13 +311,13 @@ export class ExternalDataService {
   //   - householdSize: Weighted average by dwelling count
   //   - employmentRate: Weighted average by population
   //   - medianIncome: Weighted average by population
-  private static aggregateMultiSA2Metrics(sa2Codes: Array<{code: string; coveragePercent: number}>): any {
+  private static aggregateMultiSA2Metrics(sa2Codes: Array<{ code: string; coveragePercent: number }>): any {
     if (sa2Codes.length === 0) return {};
-    
+
     const sa2Records = sa2Codes
       .map(s => ({ ...this.getSA2Record(s.code), coverage: s.coveragePercent }))
       .filter(r => r.sa2Code != null);  // Only include SA2s with data
-    
+
     if (sa2Records.length === 0) return {};
 
     // Aggregation formulas:
@@ -373,12 +373,12 @@ export class ExternalDataService {
       if (isMultiSA2) {
         // Multi-SA2 suburb - use weighted aggregation
         const aggregated = this.aggregateMultiSA2Metrics(sa2Mapping!.sa2_codes!);
-        
+
         if (Object.keys(aggregated).length > 0) {
           console.debug(`[AGGREGATION] Multi-SA2 aggregation for ${suburbName}: Population=${aggregated.population}`);
           return aggregated;
         }
-        
+
         // Fallback to suburb-level data if SA2-level data not available
         console.debug(`[AGGREGATION] SA2-level data not available for ${suburbName}, falling back to suburb-level`);
       }
@@ -407,7 +407,7 @@ export class ExternalDataService {
     try {
       const suburbKey = suburbName.toUpperCase();
       const stateKey = `${suburbKey}|${(state || '').toUpperCase()}`;
-      
+
       if (!suburbSchools) {
         console.warn(`[SCHOOLS] No schools data available for ${stateKey}`);
         return null;
@@ -418,7 +418,7 @@ export class ExternalDataService {
         console.debug(`[SCHOOLS] Using data for ${stateKey}: ${suburbSchools[stateKey]} schools`);
         return suburbSchools[stateKey];
       }
-      
+
       // Fall back to suburb name without state
       if (suburbSchools[suburbKey] != null) {
         console.debug(`[SCHOOLS] Using data for ${suburbKey}: ${suburbSchools[suburbKey]} schools`);
@@ -437,12 +437,12 @@ export class ExternalDataService {
   static async getCommuteTime(origin: string, destination: string = 'Sydney Town Hall'): Promise<number | null> {
     try {
       const suburbKey = origin.split(',')[0].trim().toUpperCase();
-      
+
       // Try preloaded official commute times ONLY
       if (suburbCommutes) {
         const stateMatch = origin.includes('NSW') ? '|NSW' : origin.includes('VIC') ? '|VIC' : '';
         const lookupKey = stateMatch ? `${suburbKey}${stateMatch}` : suburbKey;
-        
+
         if (suburbCommutes[lookupKey] != null) {
           console.debug(`[COMMUTE] Using official commute time for ${lookupKey}: ${suburbCommutes[lookupKey]} minutes`);
           return suburbCommutes[lookupKey];
@@ -477,7 +477,7 @@ export class ExternalDataService {
     try {
       const suburbKey = suburbName.toUpperCase();
       const stateKey = `${suburbKey}|${(state || '').toUpperCase()}`;
-      
+
       // Try to get from loaded JSON first
       if (suburbPublicTransport) {
         console.debug(`[TRANSPORT] Looking for keys: [${stateKey}] or [${suburbKey}]`);
@@ -506,7 +506,7 @@ export class ExternalDataService {
     try {
       const suburbKey = suburbName.toUpperCase();
       const stateKey = `${suburbKey}|${(state || '').toUpperCase()}`;
-      
+
       // Try to get from loaded JSON first
       if (suburbParks) {
         console.debug(`[PARKS] Looking for keys: [${stateKey}] or [${suburbKey}]`);
