@@ -42,7 +42,7 @@ export interface SuburbRow {
   One_Year_Growth_Pct: number;
   Median_Rent_Weekly: number;
   HH_Size: number;
-  Employment_Rate: number;
+
   School_Count: number;
   Commute_Time_Mins: number;
   Parks_Count: number;
@@ -78,38 +78,36 @@ export interface DropdownItem {
  */
 export function getAllSuburbsForDropdown(state?: string): Promise<DropdownItem[]> {
   return new Promise((resolve, reject) => {
-    db.all(sql, [qParam, query], (err: Error | null, rows: SuburbRow[]) => {
+    const db = new sqlite3.Database(dbPath, (err) => {
       if (err) return reject(err);
 
       let sql = `
         SELECT DISTINCT
-          s.SAL_ID,
-          s.Suburb_Name,
-          s.SAL_CODE_2021,
-          s.State,
-          s.Postcode,
-          s.Population,
-          s.Median_Age,
-          s.Median_Income_Weekly,
-          s.Median_House_Price,
-          s.One_Year_Growth_Pct,
-          s.Median_Rent_Weekly,
-          s.HH_Size,
-          sd.employment_rate AS Employment_Rate,
-          s.School_Count,
-          s.Commute_Time_Mins,
-          s.Parks_Count,
-          s.Rental_Yield_Pct
-        FROM suburbs s
-        LEFT JOIN suburb_demographics sd ON s.SAL_ID = 'SAL' || sd.ssc
-        WHERE s.SAL_ID IS NOT NULL
+          SAL_ID,
+          Suburb_Name,
+          SAL_CODE_2021,
+          State,
+          Postcode,
+          Population,
+          Median_Age,
+          Median_Income_Weekly,
+          Median_House_Price,
+          One_Year_Growth_Pct,
+          Median_Rent_Weekly,
+          HH_Size,
+          School_Count,
+          Commute_Time_Mins,
+          Parks_Count,
+          Rental_Yield_Pct
+        FROM suburbs
+        WHERE SAL_ID IS NOT NULL
       `;
       const params: string[] = [];
       if (state) {
-        sql += ` AND s.State = ?`;
+        sql += ` AND State = ?`;
         params.push(state.toUpperCase());
       }
-      sql += ` ORDER BY s.Suburb_Name, s.State`;
+      sql += ` ORDER BY Suburb_Name, State`;
 
       db.all(sql, params, (err, rows: SuburbRow[]) => {
         db.close();
@@ -129,7 +127,7 @@ export function getAllSuburbsForDropdown(state?: string): Promise<DropdownItem[]
           one_year_growth: row.One_Year_Growth_Pct,
           median_rent: row.Median_Rent_Weekly,
           hh_size: row.HH_Size,
-          employment_rate: row.Employment_Rate,
+          employment_rate: 0, // Not in suburbs table
           school_count: row.School_Count,
           commute_time: row.Commute_Time_Mins,
           parks_count: row.Parks_Count,
@@ -157,40 +155,38 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
 
       let sql = `
         SELECT DISTINCT
-          s.SAL_ID,
-          s.Suburb_Name,
-          s.SAL_CODE_2021,
-          s.State,
-          s.Postcode,
-          s.Population,
-          s.Median_Age,
-          s.Median_Income_Weekly,
-          s.Median_House_Price,
-          s.One_Year_Growth_Pct,
-          s.Median_Rent_Weekly,
-          s.HH_Size,
-          sd.employment_rate AS Employment_Rate,
-          s.School_Count,
-          s.Commute_Time_Mins,
-          s.Parks_Count,
-          s.Rental_Yield_Pct
-        FROM suburbs s
-        LEFT JOIN suburb_demographics sd ON s.SAL_ID = 'SAL' || sd.ssc
-        WHERE s.SAL_ID IS NOT NULL
+          SAL_ID,
+          Suburb_Name,
+          SAL_CODE_2021,
+          State,
+          Postcode,
+          Population,
+          Median_Age,
+          Median_Income_Weekly,
+          Median_House_Price,
+          One_Year_Growth_Pct,
+          Median_Rent_Weekly,
+          HH_Size,
+          School_Count,
+          Commute_Time_Mins,
+          Parks_Count,
+          Rental_Yield_Pct
+        FROM suburbs
+        WHERE SAL_ID IS NOT NULL
           AND (
-            UPPER(s.Suburb_Name) LIKE ?
-            OR UPPER(s.Postcode) = ?
+            UPPER(Suburb_Name) LIKE ?
+            OR UPPER(Postcode) = ?
           )
       `;
 
       const params: string[] = [`%${normalizedQuery}%`, normalizedQuery];
 
       if (state) {
-        sql += ` AND s.State = ?`;
+        sql += ` AND State = ?`;
         params.push(state.toUpperCase());
       }
 
-      sql += ` ORDER BY s.Suburb_Name LIMIT 50`;
+      sql += ` ORDER BY Suburb_Name LIMIT 50`;
 
       db.all(sql, params, (err, rows: SuburbRow[]) => {
         db.close();
@@ -210,7 +206,7 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
           one_year_growth: row.One_Year_Growth_Pct,
           median_rent: row.Median_Rent_Weekly,
           hh_size: row.HH_Size,
-          employment_rate: row.Employment_Rate,
+          employment_rate: 0, // Not in suburbs table
           school_count: row.School_Count,
           commute_time: row.Commute_Time_Mins,
           parks_count: row.Parks_Count,
@@ -230,33 +226,29 @@ export async function searchSuburbs(query: string, state?: string): Promise<Drop
  */
 export function getSuburbWithPostcodes(ssc: string): Promise<DropdownItem & { display: string, all_postcodes: string[] } | null> {
   return new Promise((resolve, reject) => {
-    db.all(sql, [], (err: Error | null, rows: SuburbRow[]) => {
+    const db = new sqlite3.Database(dbPath, (err) => {
       if (err) return reject(err);
 
       db.get(`
         SELECT 
-          s.SAL_ID AS ssc,
-          s.Suburb_Name AS suburb_name,
-          s.SAL_CODE_2021 AS sal_code_2021,
-          s.State AS state,
-          s.Postcode AS postcode,
-          s.Population AS population,
-          s.Median_Age AS median_age,
-          s.Median_Income_Weekly AS median_income,
-          s.Median_House_Price AS median_house_price,
-          s.One_Year_Growth_Pct AS one_year_growth,
-          s.Median_Rent_Weekly AS median_rent,
-          s.HH_Size AS hh_size,
-          sd.employment_rate AS employment_rate,
-          s.School_Count AS school_count,
-          s.Commute_Time_Mins AS commute_time,
-          s.Parks_Count AS parks_count,
-          s.Rental_Yield_Pct AS rental_yield,
-          sp.postcodes AS all_postcodes
-        FROM suburbs s
-        LEFT JOIN suburb_postcodes sp ON s.SAL_ID = sp.ssc
-        LEFT JOIN suburb_demographics sd ON s.SAL_ID = 'SAL' || sd.ssc
-        WHERE s.SAL_ID = ? LIMIT 1
+          SAL_ID AS ssc,
+          Suburb_Name AS suburb_name,
+          SAL_CODE_2021 AS sal_code_2021,
+          State AS state,
+          Postcode AS postcode,
+          Population AS population,
+          Median_Age AS median_age,
+          Median_Income_Weekly AS median_income,
+          Median_House_Price AS median_house_price,
+          One_Year_Growth_Pct AS one_year_growth,
+          Median_Rent_Weekly AS median_rent,
+          HH_Size AS hh_size,
+          School_Count AS school_count,
+          Commute_Time_Mins AS commute_time,
+          Parks_Count AS parks_count,
+          Rental_Yield_Pct AS rental_yield
+        FROM suburbs
+        WHERE SAL_ID = ? LIMIT 1
       `, [ssc], (err, row: any) => {
         db.close();
         if (err) return reject(err);
@@ -275,13 +267,13 @@ export function getSuburbWithPostcodes(ssc: string): Promise<DropdownItem & { di
           one_year_growth: row.one_year_growth ?? 0,
           median_rent: row.median_rent ?? 0,
           hh_size: row.hh_size ?? 0,
-          employment_rate: row.employment_rate ?? 0,
+          employment_rate: 0, // Not in suburbs table
           school_count: row.school_count ?? 0,
           commute_time: row.commute_time ?? 0,
           parks_count: row.parks_count ?? 0,
           rental_yield: row.rental_yield ?? 0,
           sal_code_2021: row.sal_code_2021 ?? '',
-          all_postcodes: row.all_postcodes ? row.all_postcodes.split(',') : [row.postcode].filter(Boolean),
+          all_postcodes: [row.postcode].filter(Boolean),
           ssc: row.ssc,
           display: `${row.suburb_name}, ${row.state} ${row.postcode}`,
           searchText: `${row.suburb_name} ${row.state} ${row.postcode}`.toLowerCase(),

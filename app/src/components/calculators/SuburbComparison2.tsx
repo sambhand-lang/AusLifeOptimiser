@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MapPin, Car, Users, Info, TreePine, Bus, Home, TrendingUp, Wallet, Percent } from 'lucide-react';
+import { MapPin, Car, Users, Info, TreePine, Home, TrendingUp, Wallet, Percent } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SearchableSuburbSelector } from './SearchableSuburbSelector';
 
@@ -124,35 +124,9 @@ export function SuburbComparison2() {
 
   const renderMetricCell = (metric: any, metricType?: string) => {
     const formatted = formatMetric(metric, metricType);
-    const badgeStyles: Record<string, string> = {
-      official: 'bg-green-100 text-green-800 border-green-300',
-      estimate: 'bg-amber-100 text-amber-800 border-amber-300',
-      derived: 'bg-blue-100 text-blue-800 border-blue-300',
-      lowConfidence: 'bg-red-100 text-red-800 border-red-300'
-    };
-    const badgeLabels: Record<string, string> = {
-      official: '✓ Census',
-      estimate: '⚠ Est.',
-      derived: 'ⓘ Derived',
-      lowConfidence: '⚠ Low Confidence'
-    };
-    const hasLowConfidence = metric?.dataQualityConfidence && metric.dataQualityConfidence < 50;
     return (
       <div className="flex flex-col items-center gap-1">
         <div className="text-lg font-bold text-emerald-700">{formatted.display}</div>
-        {hasLowConfidence && (
-          <div className={`text-xs px-2 py-1 rounded border ${badgeStyles['lowConfidence']}`} title={metric.dataQualityNote || 'Low confidence estimate'}>
-            {badgeLabels['lowConfidence']}
-          </div>
-        )}
-        {formatted.badge && (
-          <div className={`text-xs px-2 py-1 rounded border ${badgeStyles[formatted.badge]}`}>
-            {badgeLabels[formatted.badge]}
-          </div>
-        )}
-        {formatted.meta && (
-          <div className="text-xs text-gray-500">{formatted.meta}</div>
-        )}
       </div>
     );
   };
@@ -160,11 +134,9 @@ export function SuburbComparison2() {
   const getPopulationMetric = (s: SuburbData | null) => s?.realTimeData?.population ?? s?.population ?? null;
   const getMedianAgeMetric = (s: SuburbData | null) => s?.realTimeData?.medianAge ?? s?.median_age ?? null;
   const getHouseholdSizeMetric = (s: SuburbData | null) => s?.realTimeData?.householdSize ?? s?.hh_size ?? null;
-  const getEmploymentRateMetric = (s: SuburbData | null) => s?.realTimeData?.employmentRate ?? s?.employment_rate ?? null;
   const getMedianIncomeMetric = (s: SuburbData | null) => s?.realTimeData?.medianIncome ?? s?.median_income ?? null;
   const getCommuteMetric = (s: SuburbData | null) => s?.realTimeData?.commute?.drivingTimeMinutes ?? s?.commute_time ?? null;
   const getSchoolCountMetric = (s: SuburbData | null) => s?.realTimeData?.schools?.count ?? s?.school_count ?? null;
-  const getPublicTransportStopsMetric = (s: SuburbData | null) => s?.realTimeData?.publicTransportStops ?? null;
   const getParksMetric = (s: SuburbData | null) => s?.realTimeData?.parks ?? s?.parks_count ?? null;
 
   // Real Estate Metrics from Database
@@ -300,24 +272,6 @@ export function SuburbComparison2() {
                       </tr>
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
-                          <Users className="h-4 w-4 text-amber-600" />
-                          Employment Rate (%)
-                        </td>
-                        {(() => {
-                          const a = getEmploymentRateMetric(s1);
-                          const b = getEmploymentRateMetric(s2);
-                          const c = s3 ? getEmploymentRateMetric(s3) : null;
-                          return (
-                            <>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'employmentRate')}</td>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'employmentRate')}</td>
-                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'employmentRate')}</td>}
-                            </>
-                          );
-                        })()}
-                      </tr>
-                      <tr className="border-b hover:bg-emerald-50">
-                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-green-600" />
                           Median Weekly Income
                         </td>
@@ -361,24 +315,6 @@ export function SuburbComparison2() {
                           const a = getSchoolCountMetric(s1);
                           const b = getSchoolCountMetric(s2);
                           const c = s3 ? getSchoolCountMetric(s3) : null;
-                          return (
-                            <>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(b)}</td>
-                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c)}</td>}
-                            </>
-                          );
-                        })()}
-                      </tr>
-                      <tr className="border-b hover:bg-emerald-50">
-                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
-                          <Bus className="h-4 w-4 text-purple-600" />
-                          Public Transport Stops
-                        </td>
-                        {(() => {
-                          const a = getPublicTransportStopsMetric(s1);
-                          const b = getPublicTransportStopsMetric(s2);
-                          const c = s3 ? getPublicTransportStopsMetric(s3) : null;
                           return (
                             <>
                               <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
@@ -489,22 +425,18 @@ export function SuburbComparison2() {
               <div className="flex items-start gap-3">
                 <Info className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-1" />
                 <div className="text-sm text-gray-700">
-                  <strong className="text-emerald-900">Data Sources & Accuracy (9 Metrics):</strong>
+                  <strong className="text-emerald-900">Data Sources & Accuracy (11 Metrics):</strong>
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-4 h-4 rounded border border-green-300 bg-green-100"></span>
-                      <span><strong>✓ Census:</strong> ABS Census 2021 official data (population, median age, household size, employment, income)</span>
+                      <span><strong>✓ Census:</strong> ABS Census 2021 official data (population, median age, household size, weekly income)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-4 h-4 rounded border border-amber-300 bg-amber-100"></span>
-                      <span><strong>⚠ Estimates:</strong> Postcode-based demographic estimates where official data unavailable</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block w-4 h-4 rounded border border-blue-300 bg-blue-100"></span>
-                      <span><strong>ⓘ Derived:</strong> Calculated metrics (routes, transport density, parks, schools)</span>
+                      <span><strong>⚠ Estimates:</strong> Real estate data and calculated suburb metrics</span>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-gray-600 italic">13 metrics: Population, Age, Household Size, Employment, Income, Commute, Schools, Transport Stops, Parks, House Price, Growth, Rent, Yield</p>
+                  <p className="mt-2 text-xs text-gray-600 italic">Metrics: Population, Age, Household Size, Income, Commute, Schools, Parks, House Price, Growth, Rent, Yield</p>
                 </div>
               </div>
             </div>
