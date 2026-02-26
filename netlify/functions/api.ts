@@ -8,7 +8,18 @@ const commuteRaw: any = require('./commute_times.json');
 const parksRaw: any = require('./parks.json');
 const transportRaw: any = require('./public_transport_stops.json');
 
-const suburbsData = () => suburbsRaw;
+// Normalize suburbs data to ensure lowercase keys (suburb_name, state, postcode, ssc)
+const normalizedSuburbs = suburbsRaw.map(s => {
+  const n: any = { ...s };
+  if (s.SAL_ID && !s.ssc) n.ssc = s.SAL_ID.replace('SAL', '');
+  if (s.Suburb_Name && !s.suburb_name) n.suburb_name = s.Suburb_Name;
+  if (s.State && !s.state) n.state = s.State;
+  if (s.Postcode && !s.postcode) n.postcode = s.Postcode;
+  if (n.ssc && !n.id) n.id = n.ssc;
+  return n;
+});
+
+const suburbsData = () => normalizedSuburbs;
 const demographicsData = () => demographicsRaw;
 const schoolsData = () => schoolsRaw;
 const commuteData = () => commuteRaw;
@@ -23,7 +34,7 @@ const handler: Handler = async (event) => {
   }
   // Remove function base path for route matching
   pathStr = pathStr.replace(/^\/.netlify\/functions\/api/, '') || '/' + (event.queryStringParameters?.['*'] || '');
-  
+
   const method = event.httpMethod;
   console.log('API Route:', method, pathStr);
 
@@ -64,7 +75,7 @@ const handler: Handler = async (event) => {
       const suburb_name = String(s.suburb_name).toUpperCase();
       const state = s.state || (demographics && demographics.state) || 'NSW';
       const key = `${suburb_name}|${state}`;
-      
+
       const schools = schoolsData();
       const commute = commuteData();
       const parks = parksData();
@@ -142,7 +153,7 @@ const handler: Handler = async (event) => {
         } else if (source && source.startsWith('STATE_AVERAGE')) {
           datasetYear = 2021; // imputed from state averages based on 2021 census
         } else if (srcObj.last_updated) {
-          datasetYear = Number((srcObj.last_updated || '').slice(0,4));
+          datasetYear = Number((srcObj.last_updated || '').slice(0, 4));
         }
         return { value, source, datasetYear, type: 'official_dataset' };
       };
@@ -160,7 +171,7 @@ const handler: Handler = async (event) => {
       const suburb_name_upper = String(suburb.suburb_name).toUpperCase();
       const suburb_state = suburb.state || (demographics && demographics.state) || 'NSW';
       const amenity_key = `${suburb_name_upper}|${suburb_state}`;
-      
+
       const schools = schoolsData();
       const commute = commuteData();
       const parks = parksData();
@@ -210,7 +221,7 @@ const handler: Handler = async (event) => {
       if (!q || q.length < 1) return { statusCode: 200, body: JSON.stringify({ data: [] }) };
       const suburbs = suburbsData();
       const results = suburbs
-        .filter((s: any) => String(s.suburb_name).toLowerCase().includes(q) || String((s.postcode||'')).startsWith(q))
+        .filter((s: any) => String(s.suburb_name).toLowerCase().includes(q) || String((s.postcode || '')).startsWith(q))
         .slice(0, 50)
         .map((s: any) => {
           let postcode = s.postcode || s.postcodes || null;
