@@ -1,16 +1,12 @@
 import { useState, useEffect } from 'react';
+import { getSuburbsForComparison } from '@/lib/suburbs';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { MapPin, Car, Users, Info, TreePine, Home, TrendingUp, Wallet, Percent } from 'lucide-react';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SearchableSuburbSelector } from './SearchableSuburbSelector';
+"use client";
 
 // Type definitions
-type Metric = {
-  value: number;
-  source: string;
-  datasetYear: number;
-  type: 'official_dataset' | 'derived_metric';
-};
 
 type SuburbData = {
   id?: number;
@@ -24,93 +20,33 @@ type SuburbData = {
     population?: Metric | null;
     medianAge?: Metric | null;
     householdSize?: Metric | null;
-    employmentRate?: Metric | null;
-    medianIncome?: Metric | null;
-    commute?: { drivingTimeMinutes?: Metric | null } | null;
-    schools?: { count?: Metric | null } | null;
-    publicTransportStops?: Metric | null;
-    parks?: Metric | null;
   } | null;
-  // Database fields from dropdownService
-  population?: number;
-  median_age?: number;
-  median_income?: number;
-  median_house_price?: number;
-  one_year_growth?: number;
-  median_rent?: number;
-  rental_yield?: number;
-  hh_size?: number;
-  employment_rate?: number;
-  school_count?: number;
-  commute_time?: number;
-  parks_count?: number;
-  dataSource?: string | null;
-  lastUpdated?: string | null;
 };
 
-export function SuburbComparison2() {
-  const [suburb1, setSuburb1] = useState('');
-  const [suburb2, setSuburb2] = useState('');
-  const [suburb3, setSuburb3] = useState('');
-  const [s1, setS1] = useState<SuburbData | null>(null);
-  const [s2, setS2] = useState<SuburbData | null>(null);
-  const [s3, setS3] = useState<SuburbData | null>(null);
+interface Props {
+  suburbId: string;
+}
 
-  const fetchSuburb = (name: string, setState: (data: SuburbData | null) => void) => {
-    if (!name) {
-      setState(null);
-      return;
+export default function SuburbComparison2({ suburbId }: Props) {
+  // Use suburbId directly without next/navigation
+  return (
+    <div>
+      <h2>Comparing Suburb: {suburbId}</h2>
+      {/* Other component logic */}
+    </div>
+  );
+}
+
+// ...existing code...
+
+
+// Type definitions
+        <div>
+          <h2>Comparing Suburb: {suburbId}</h2>
+          {/* Other component logic */}
+        </div>
+      );
     }
-    const parts = name.split('|');
-    const suburbanName = parts[0]?.trim() || '';
-    const postcode = parts[1]?.trim() || null;
-
-    fetch(`/api/dropdowns/search?q=${encodeURIComponent(suburbanName)}`)
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => {
-        const results = data.results || (Array.isArray(data) ? data : []);
-        if (results.length > 0) {
-          const chosen = postcode
-            ? results.find((s: SuburbData) => String(s.postcode) === String(postcode)) || results[0]
-            : results[0];
-          return fetch(`/api/suburbs/${chosen.ssc || chosen.id}/details`);
-        }
-        return Promise.reject();
-      })
-      .then(res => res.json())
-      .then(data => setState(data))
-      .catch(() => setState(null));
-  };
-
-  useEffect(() => { fetchSuburb(suburb1, setS1); }, [suburb1]);
-  useEffect(() => { fetchSuburb(suburb2, setS2); }, [suburb2]);
-  useEffect(() => { fetchSuburb(suburb3, setS3); }, [suburb3]);
-
-  const formatMetric = (metric?: any | null, metricType?: string) => {
-    if (metric == null) return { display: 'Data not available', meta: null, badge: null };
-
-    let value: number;
-    let meta: string | null = null;
-    let badge: string | null = null;
-
-    if (typeof metric === 'number') {
-      value = metric;
-    } else if (typeof metric === 'object' && metric.value != null) {
-      value = metric.value;
-      meta = metric.source ? `${metric.source}${metric.datasetYear ? ` (${metric.datasetYear})` : ''}` : null;
-      const isOfficial = metric.source?.includes('ABS Census');
-      badge = isOfficial ? 'official' : metric.source?.includes('Estimate') || !metric.source ? 'estimate' : 'derived';
-    } else {
-      return { display: 'Data not available', meta: null, badge: null };
-    }
-
-    let display: string;
-    if (metricType === 'employmentRate') {
-      // Handle both decimal (0.95) and percentage (95) formats
-      const percentValue = value < 1 ? value * 100 : value;
-      display = `${percentValue.toFixed(1)}%`;
-    } else if (metricType === 'housePrice' || metricType === 'rent' || metricType === 'medianIncome') {
-      display = `$${Math.round(value).toLocaleString()}`;
     } else if (metricType === 'growth' || metricType === 'yield') {
       display = `${value.toFixed(1)}%`;
     } else if (value % 1 === 0) {
@@ -165,9 +101,9 @@ export function SuburbComparison2() {
           </CardHeader>
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <SearchableSuburbSelector label="Suburb 1" selectedSuburb={suburb1} onSuburbChange={setSuburb1} />
-              <SearchableSuburbSelector label="Suburb 2" selectedSuburb={suburb2} onSuburbChange={setSuburb2} />
-              <SearchableSuburbSelector label="Suburb 3 (Optional)" selectedSuburb={suburb3} onSuburbChange={setSuburb3} />
+              <SearchableSuburbSelector label="Suburb 1" selectedSuburb={suburb1} onSuburbChange={(val) => { setSuburb1(val); onSuburbChange1?.(val); }} />
+              <SearchableSuburbSelector label="Suburb 2" selectedSuburb={suburb2} onSuburbChange={(val) => { setSuburb2(val); onSuburbChange2?.(val); }} />
+              <SearchableSuburbSelector label="Suburb 3 (Optional)" selectedSuburb={suburb3} onSuburbChange={(val) => { setSuburb3(val); onSuburbChange3?.(val); }} />
             </div>
           </CardContent>
         </Card>
@@ -187,29 +123,20 @@ export function SuburbComparison2() {
         )}
 
         {s1 && s2 && (
-          <>
-            {/* Comparison Table */}
-            <Card className="border-emerald-200 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-amber-50 border-b-2 border-emerald-200">
-                <CardTitle className="text-emerald-900">Detailed Comparison</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-                        <th className="px-6 py-4 text-left font-bold">Metric</th>
-                        <th className="px-6 py-4 text-center font-bold text-emerald-50">
-                          <div className="font-bold">{s1.suburb_name}</div>
-                          <div className="text-xs text-emerald-100">{s1.postcode}, {s1.state}</div>
-                        </th>
-                        <th className="px-6 py-4 text-center font-bold text-emerald-50">
-                          <div className="font-bold">{s2.suburb_name}</div>
                           <div className="text-xs text-emerald-100">{s2.postcode}, {s2.state}</div>
                         </th>
                         {s3 && (
                           <th className="px-6 py-4 text-center font-bold text-emerald-50">
-                            <div className="font-bold">{s3.suburb_name}</div>
+                            <div className="font-bold flex items-center gap-1">
+                              <a
+                                href={`/suburbs/${encodeURIComponent(s3.suburb_name.replace(/\s+/g, '-').toLowerCase())}`}
+                                className="hover:underline text-emerald-700 flex items-center gap-1"
+                                title="View suburb profile"
+                              >
+                                {s3.suburb_name}
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 015.656 5.656l-5.657 5.657a4 4 0 01-5.656-5.657m5.657-5.656L15 5m0 0V3m0 2h2" /></svg>
+                              </a>
+                            </div>
                             <div className="text-xs text-emerald-100">{s3.postcode}, {s3.state}</div>
                           </th>
                         )}

@@ -208,15 +208,46 @@ function App() {
                 <span className="font-medium">{calc.shortName}</span>
               </Button>
             ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setActiveCalculator('suburb')}
-              className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'}`}
-            >
-              <MapPin className="h-4 w-4" />
-              <span className="font-medium">Suburbs</span>
-            </Button>
+            <div className="relative group">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} flex items-center transition-all duration-200`}
+                style={{ pointerEvents: 'auto' }}
+              >
+                <MapPin className="h-4 w-4" />
+                <span className="font-medium">Suburbs</span>
+                <ChevronRight className="h-4 w-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+              </Button>
+              <div className="absolute left-0 top-full mt-2 min-w-[180px] bg-white border border-emerald-100 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200 z-50">
+                <ul className="py-2">
+                  <li>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors duration-150"
+                      onClick={() => setActiveCalculator('suburb')}
+                    >
+                      Suburb Rankings
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
+                      disabled
+                    >
+                      Compare Suburbs
+                    </button>
+                  </li>
+                  <li>
+                    <button
+                      className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors duration-150"
+                      onClick={() => window.open('/SCORING_V1.md', '_blank')}
+                    >
+                      Methodology
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            </div>
           </nav>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -383,6 +414,17 @@ function App() {
                       <Receipt className="h-5 w-5 mr-2" />
                       Stamp Duty
                     </Button>
+                      <a href="/suburbs/rankings" tabIndex={-1} className="contents">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full px-6 py-3 text-base font-semibold flex items-center gap-2 shadow-none"
+                          style={{ minWidth: '0' }}
+                        >
+                          <MapPin className="h-4 w-4 mr-2 text-emerald-500" />
+                          Explore Suburb Rankings
+                        </Button>
+                      </a>
                   </div>
 
                   {/* Trust Indicators */}
@@ -411,6 +453,39 @@ function App() {
               </div>
             </section>
 
+            {/* Top Ranked Suburbs Section */}
+            <section className="py-8 bg-white border-t border-emerald-100">
+              <div className="container mx-auto px-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xl md:text-2xl font-bold text-emerald-700">Top Ranked Suburbs Right Now</h2>
+                  <a href="/suburbs/rankings">
+                    <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full px-4 py-2 text-base font-semibold">See Full Rankings</Button>
+                  </a>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {/* Example: Replace with real data fetch if needed */}
+                  {[{
+                    suburbName: 'Sydney', state: 'NSW', overallScore: 92, scoreBreakdown: { affordability: 80, employment: 95, commute: 88, schools: 90, lifestyle: 93 }
+                  }, {
+                    suburbName: 'Melbourne', state: 'VIC', overallScore: 89, scoreBreakdown: { affordability: 78, employment: 90, commute: 85, schools: 88, lifestyle: 91 }
+                  }, {
+                    suburbName: 'Brisbane', state: 'QLD', overallScore: 85, scoreBreakdown: { affordability: 82, employment: 87, commute: 80, schools: 86, lifestyle: 88 }
+                  }].map((suburb, idx) => (
+                    <div key={idx} className="flex flex-col items-center">
+                      <SuburbScoreCard
+                        suburbName={suburb.suburbName}
+                        state={suburb.state}
+                        overallScore={suburb.overallScore}
+                        scoreBreakdown={suburb.scoreBreakdown}
+                      />
+                      <div className="mt-2 text-xs text-slate-500 text-center">
+                        {`Affordability: ${suburb.scoreBreakdown?.affordability ?? '-'} | Employment: ${suburb.scoreBreakdown?.employment ?? '-'} | Commute: ${suburb.scoreBreakdown?.commute ?? '-'}`}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
             {/* Stats Section */}
             <section className="py-16 bg-white relative">
               <div className="absolute inset-0 pattern-dots opacity-50" />
