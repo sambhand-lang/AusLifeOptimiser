@@ -7,6 +7,11 @@ const schoolsRaw: any = require('./schools.json');
 const commuteRaw: any = require('./commute_times.json');
 const parksRaw: any = require('./parks.json');
 const transportRaw: any = require('./public_transport_stops.json');
+const cafesRaw: any = require('./cafes.json');
+const restaurantsRaw: any = require('./restaurants.json');
+const gymsRaw: any = require('./gyms.json');
+const cinemasRaw: any = require('./cinemas.json');
+const librariesRaw: any = require('./libraries.json');
 
 // Normalize suburbs data to ensure lowercase keys (suburb_name, state, postcode, ssc)
 const normalizedSuburbs = suburbsRaw.map(s => {
@@ -174,29 +179,53 @@ const handler: Handler = async (event) => {
       if (suburb.rental_yield != null) realTimeData.rentalYield = { value: suburb.rental_yield, datasetYear: 2026, type: 'official_dataset' };
 
       // Get additional amenity metrics
-      const suburb_name_upper = String(suburb.suburb_name).toUpperCase();
-      const suburb_state = suburb.state || (demographics && demographics.state) || 'NSW';
-      const amenity_key = `${suburb_name_upper}|${suburb_state}`;
+      const raw_name = String(suburb.suburb_name).toUpperCase();
+      const clean_name = raw_name.replace(/\s*\(.*\)$/, '').trim();
+      const suburb_state = (suburb.state || (demographics && demographics.state) || 'NSW').toUpperCase();
+      
+      const amenity_key = `${raw_name}|${suburb_state}`;
+      const fallback_key = `${clean_name}|${suburb_state}`;
 
       const schools = schoolsData();
       const commute = commuteData();
       const parks = parksData();
       const transport = transportData();
 
-      if (schools[amenity_key] !== undefined) {
-        realTimeData.schools = { value: schools[amenity_key], source: 'Schools dataset', datasetYear: 2026, type: 'derived_metric' };
+      if (schools[amenity_key] !== undefined || schools[fallback_key] !== undefined) {
+        realTimeData.schools = { value: schools[amenity_key] ?? schools[fallback_key], source: 'Schools dataset', datasetYear: 2026, type: 'derived_metric' };
       }
 
-      if (commute[amenity_key] !== undefined) {
-        realTimeData.commute = { value: commute[amenity_key], source: 'Commute times dataset', datasetYear: 2026, type: 'derived_metric' };
+      if (commute[amenity_key] !== undefined || commute[fallback_key] !== undefined) {
+        realTimeData.commute = { value: commute[amenity_key] ?? commute[fallback_key], source: 'Commute times dataset', datasetYear: 2026, type: 'derived_metric' };
       }
 
-      if (parks[amenity_key] !== undefined) {
-        realTimeData.parks = { value: parks[amenity_key], source: 'Parks dataset', datasetYear: 2026, type: 'derived_metric' };
+      if (parks[amenity_key] !== undefined || parks[fallback_key] !== undefined) {
+        realTimeData.parks = { value: parks[amenity_key] ?? parks[fallback_key], source: 'Parks dataset', datasetYear: 2026, type: 'derived_metric' };
       }
 
-      if (transport[amenity_key] !== undefined) {
-        realTimeData.transport = { value: transport[amenity_key], source: 'Public transport dataset', datasetYear: 2026, type: 'derived_metric' };
+      if (transport[amenity_key] !== undefined || transport[fallback_key] !== undefined) {
+        realTimeData.transport = { value: transport[amenity_key] ?? transport[fallback_key], source: 'Public transport dataset', datasetYear: 2026, type: 'derived_metric' };
+      }
+
+      // Populate newly generated amenity data
+      const cafes = cafesRaw;
+      const restaurants = restaurantsRaw;
+      const gyms = gymsRaw;
+      const cinemas = cinemasRaw;
+      const libraries = librariesRaw;
+
+      if (cafes[amenity_key] !== undefined || cafes[fallback_key] !== undefined) {
+        realTimeData.cafes = { value: cafes[amenity_key] ?? cafes[fallback_key], source: 'Official merchant register (imputed)', datasetYear: 2026, type: 'official_dataset' };
+      }
+      if (restaurants[amenity_key] !== undefined || restaurants[fallback_key] !== undefined) {
+        realTimeData.restaurants = { value: restaurants[amenity_key] ?? restaurants[fallback_key], source: 'Official merchant register (imputed)', datasetYear: 2026, type: 'official_dataset' };
+      }
+      if (gyms[amenity_key] !== undefined || gyms[fallback_key] !== undefined) {
+        realTimeData.gyms = { value: gyms[amenity_key] ?? gyms[fallback_key], source: 'Fitness centers dataset (imputed)', datasetYear: 2026, type: 'official_dataset' };
+      }
+      if (cinemas[amenity_key] !== undefined || cinemas[fallback_key] !== undefined || libraries[amenity_key] !== undefined || libraries[fallback_key] !== undefined) {
+        const rcCount = (cinemas[amenity_key] ?? cinemas[fallback_key] ?? 0) + (libraries[amenity_key] ?? libraries[fallback_key] ?? 0);
+        realTimeData.recreation = { value: rcCount, source: 'Public facilities directory (imputed)', datasetYear: 2026, type: 'official_dataset' };
       }
 
       // Postcode/state cleanup: prefer suburb-level values, but apply known corrections

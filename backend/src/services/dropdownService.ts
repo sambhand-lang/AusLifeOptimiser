@@ -305,7 +305,7 @@ export function getNearbySuburbs(id: string, postcode: string, state: string): P
             SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, Overall_Score AS overall_score
             FROM suburbs
             WHERE (Postcode = ? OR State = ?) AND SAL_ID != ?
-            ORDER BY Overall_Score DESC LIMIT 4
+            ORDER BY Overall_Score DESC LIMIT 5
           `, [postcode, state, id], (err, rows: any[]) => {
             db.close();
             if (err) return reject(err);
@@ -323,10 +323,10 @@ export function getNearbySuburbs(id: string, postcode: string, state: string): P
         }
 
         const { latitude: lat1, longitude: lon1 } = current;
-        // ~0.2 degrees is roughly 22km
+        // ~0.2 degrees is roughly 22km - this allows the index on (latitude, longitude) to be used effectively
         const delta = 0.2; 
 
-        // 2. Fetch candidates in bounding box
+        // 2. Fetch candidates in bounding box - Uses idx_suburb_location
         db.all(`
           SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, 
                  Overall_Score AS overall_score, latitude, longitude
@@ -339,7 +339,7 @@ export function getNearbySuburbs(id: string, postcode: string, state: string): P
           db.close();
           if (err) return reject(err);
 
-          // 3. Haversine distance calculation in JS
+          // 3. Haversine distance calculation in JS (as SQLite default doesn't have math functions)
           const calculateDistance = (la1: number, lo1: number, la2: number, lo2: number) => {
             const R = 6371; // km
             const dLat = (la2 - la1) * Math.PI / 180;
@@ -357,7 +357,7 @@ export function getNearbySuburbs(id: string, postcode: string, state: string): P
               distance: calculateDistance(lat1, lon1, r.latitude, r.longitude)
             }))
             .sort((a, b) => a.distance - b.distance)
-            .slice(0, 4)
+            .slice(0, 5) // User requested top 5
             .map(r => ({
               id: r.ssc,
               label: `${r.suburb_name}, ${r.state} ${r.postcode}`,
@@ -365,7 +365,7 @@ export function getNearbySuburbs(id: string, postcode: string, state: string): P
               state: r.state,
               postcode: r.postcode,
               overall_score: r.overall_score,
-              distance: Math.round(r.distance * 10) / 10,
+              distance: parseFloat(r.distance.toFixed(1)), // Return as number with 1 decimal place
               ssc: r.ssc
             } as any));
 

@@ -117,6 +117,9 @@ export function SuburbComparison2({
   const getCommuteMetric = (s: any | null) => s?.realTimeData?.commute?.drivingTimeMinutes ?? s?.commute_time ?? null;
   const getSchoolCountMetric = (s: any | null) => s?.realTimeData?.schools?.count ?? s?.school_count ?? null;
   const getParksMetric = (s: any | null) => s?.realTimeData?.parks ?? s?.parks_count ?? null;
+  const getCafesMetric = (s: any | null) => s?.realTimeData?.cafes ?? null;
+  const getRestaurantsMetric = (s: any | null) => s?.realTimeData?.restaurants ?? null;
+  const getGymsMetric = (s: any | null) => s?.realTimeData?.gyms ?? null;
 
   // Real Estate Metrics from Database
   const getMedianHousePriceMetric = (s: any | null) => s?.median_house_price ?? null;
@@ -463,6 +466,61 @@ export function SuburbComparison2({
                           );
                         })()}
                       </tr>
+                      {/* New Amenity Metrics */}
+                      <tr className="border-b hover:bg-emerald-50">
+                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
+                          <span>☕</span>
+                          Cafes
+                        </td>
+                        {(() => {
+                          const a = getCafesMetric(s1);
+                          const b = getCafesMetric(s2);
+                          const c = s3 ? getCafesMetric(s3) : null;
+                          return (
+                            <>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b)}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c)}</td>}
+                            </>
+                          );
+                        })()}
+                      </tr>
+                      <tr className="border-b hover:bg-emerald-50">
+                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
+                          <span>🍽️</span>
+                          Restaurants
+                        </td>
+                        {(() => {
+                          const a = getRestaurantsMetric(s1);
+                          const b = getRestaurantsMetric(s2);
+                          const c = s3 ? getRestaurantsMetric(s3) : null;
+                          return (
+                            <>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b)}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c)}</td>}
+                            </>
+                          );
+                        })()}
+                      </tr>
+                      <tr className="border-b hover:bg-emerald-50">
+                        <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
+                          <span>🏋️</span>
+                          Gyms
+                        </td>
+                        {(() => {
+                          const a = getGymsMetric(s1);
+                          const b = getGymsMetric(s2);
+                          const c = s3 ? getGymsMetric(s3) : null;
+                          return (
+                            <>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b)}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c)}</td>}
+                            </>
+                          );
+                        })()}
+                      </tr>
                     </tbody>
                   </table>
                 </div>
@@ -485,7 +543,7 @@ export function SuburbComparison2({
                       <span><strong>⚠ Estimates:</strong> Real estate data and calculated suburb metrics</span>
                     </div>
                   </div>
-                  <p className="mt-2 text-xs text-gray-600 italic">Metrics: Population, Age, Household Size, Income, Commute, Schools, Parks, House Price, Growth, Rent, Yield</p>
+                  <p className="mt-2 text-xs text-gray-600 italic">Metrics: Population, Age, Household Size, Income, Commute, Schools, Parks, House Price, Growth, Rent, Yield, Cafes, Restaurants, Gyms</p>
                 </div>
               </div>
             </div>

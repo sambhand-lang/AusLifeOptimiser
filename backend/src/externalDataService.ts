@@ -362,6 +362,16 @@ export class ExternalDataService {
     if (absMetrics.restaurantCount != null) {
       (result as any).restaurants = { value: absMetrics.restaurantCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };
     }
+    if (absMetrics.gymCount != null) {
+      (result as any).gyms = { value: absMetrics.gymCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };
+    }
+    if (absMetrics.cinemaCount != null) {
+      (result as any).cinemas = { value: absMetrics.cinemaCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };
+    }
+    if (absMetrics.libraryCount != null) {
+      (result as any).libraries = { value: absMetrics.libraryCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };
+    }
+
     const recreationCount = (absMetrics.gymCount || 0) + (absMetrics.cinemaCount || 0) + (absMetrics.sportsFieldCount || 0) + (absMetrics.libraryCount || 0);
     if (recreationCount > 0) {
       (result as any).recreation = { value: recreationCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };

@@ -23,11 +23,12 @@ export function SuburbDetail() {
       try {
         setLoading(true);
         // Step 1: Search for the suburb to get the ID
-        const searchRes = await fetch(`/api/dropdowns/search?q=${name}`);
+        const cleanName = name?.replace(/-/g, ' ');
+        const searchRes = await fetch(`/api/dropdowns/search?q=${cleanName}`);
         const searchData = await searchRes.json();
         const searchList = Array.isArray(searchData) ? searchData : (searchData.results || searchData.data || []);
         const match = searchList.find(
-          (s: any) => s.suburb_name.toLowerCase() === name?.toLowerCase() && s.state.toLowerCase() === state?.toLowerCase()
+          (s: any) => s.suburb_name.toLowerCase() === cleanName?.toLowerCase() && s.state.toLowerCase() === state?.toLowerCase()
         );
 
         if (match) {
@@ -37,10 +38,10 @@ export function SuburbDetail() {
           
           // Use benchmarks consistent with recalculate_scores.js
           const benchmarks = {
-            priceMin: 400000, priceMax: 2500000,
-            incomeMin: 800, incomeMax: 4000,
-            commuteMin: 15, commuteMax: 90,
-            schoolMin: 0, schoolMax: 10,
+            priceMin: 400000, priceMax: 5000000,
+            incomeMin: 800, incomeMax: 4500,
+            commuteMin: 15, commuteMax: 80,
+            schoolMin: 0, schoolMax: 12,
             lifestyleMin: 0, lifestyleMax: 100
           };
           const scored = calculateSuburbScore(detailData, benchmarks);
@@ -312,17 +313,22 @@ export function SuburbDetail() {
                         Nearby Suburbs to Compare
                         <Badge variant="outline" className="text-[10px] text-slate-400">SEO Boost</Badge>
                     </h3>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                         {nearbySuburbs.map((s: any) => (
                             <Link 
                                 key={s.ssc} 
                                 to={`/suburbs/${s.state.toLowerCase()}/${s.suburb_name.toLowerCase().replace(/\s+/g, '-')}`}
-                                className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-emerald-200 hover:shadow-md transition-all text-center"
+                                className="group bg-white p-4 rounded-2xl border border-slate-100 shadow-md shadow-emerald-900/5 hover:border-emerald-200 hover:shadow-emerald-900/10 transition-all text-center"
                             >
-                                <div className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 truncate">{s.suburb_name}</div>
-                                <div className="text-[10px] font-bold text-slate-400 uppercase mt-1">
-                                    {s.state} • {s.postcode}
-                                    {s.distance != null && <span className="text-emerald-500 ml-1 font-black"> • {s.distance} km</span>}
+                                <div className="text-sm font-bold text-slate-700 group-hover:text-emerald-600 truncate mb-1">{s.suburb_name}</div>
+                                <div className="text-[10px] font-bold text-slate-400 uppercase flex items-center justify-center gap-1">
+                                    <span>{s.state}</span>
+                                    {s.distance != null && (
+                                        <>
+                                            <span className="opacity-30">•</span>
+                                            <span className="text-emerald-600 font-black">{s.distance} km</span>
+                                        </>
+                                    )}
                                 </div>
                             </Link>
                         ))}

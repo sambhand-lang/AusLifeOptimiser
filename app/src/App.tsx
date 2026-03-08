@@ -20,7 +20,9 @@ import {
   Users,
   Award,
   ArrowRight,
-  CheckCircle2
+  CheckCircle2,
+  Globe,
+  FileSearch
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,6 +35,7 @@ import { TaxCalculator } from '@/components/calculators/TaxCalculator';
 import { SuburbComparison2 } from '@/components/calculators/SuburbComparison2';
 import './App.css';
 import { SuburbScoreCard } from '@/components/suburbs/SuburbScoreCard';
+import { HeroSearch } from '@/components/suburbs/HeroSearch';
 
 type CalculatorType = 'home' | 'stampduty' | 'borrowing' | 'savings' | 'tax' | 'suburb';
 
@@ -125,9 +128,9 @@ const features = [
 ];
 
 const stats = [
-  { value: '6', label: 'Free Calculators', suffix: '' },
+  { value: '18,500', label: 'Suburbs Analysed', suffix: '+' },
+  { value: '50,000', label: 'Monthly Calculations', suffix: '+' },
   { value: '8', label: 'States Covered', suffix: '' },
-  { value: '25', label: 'Suburbs', suffix: '+' },
   { value: '100', label: 'Free Forever', suffix: '%' },
 ];
 
@@ -206,78 +209,146 @@ function InnerApp() {
 
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center gap-2">
-            {calculators.slice(0, 4).map((calc) => (
-              <Button
-                key={calc.id}
-                variant="ghost"
-                size="sm"
-                onClick={() => setActiveCalculator(calc.id)}
-                className={`gap-2 rounded-full px-4 transition-all ${activeCalculator === calc.id
-                    ? 'bg-amber-100 text-amber-700'
-                    : `hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'}`
-                  }`}
-              >
-                {calc.icon}
-                <span className="font-medium">{calc.shortName}</span>
-              </Button>
-            ))}
             <div className="relative group">
               <Button
                 variant="ghost"
                 size="sm"
                 className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} flex items-center transition-all duration-200`}
-                style={{ pointerEvents: 'auto' }}
+              >
+                <Calculator className="h-4 w-4" />
+                <span className="font-medium">Calculators</span>
+                <ChevronRight className="h-4 w-4 ml-1 transition-transform duration-200 group-hover:rotate-90" />
+              </Button>
+              <div className="absolute left-0 top-[calc(100%-8px)] pt-4 min-w-[220px] opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-50 transform translate-y-2 group-hover:translate-y-0">
+                <div className="bg-white border border-emerald-100 rounded-xl shadow-xl overflow-hidden">
+                  <ul className="py-2">
+                    {calculators.map((calc) => (
+                      <li key={calc.id}>
+                        <button
+                          className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150 flex items-center gap-3"
+                          onClick={() => setActiveCalculator(calc.id)}
+                        >
+                          <span className="text-emerald-500 opacity-60">{calc.icon}</span>
+                          <span className="font-medium">{calc.shortName}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} flex items-center transition-all duration-200`}
+              >
+                <Home className="h-4 w-4" />
+                <span className="font-medium">Home Buying</span>
+                <ChevronRight className="h-4 w-4 ml-1 transition-transform duration-200 group-hover:rotate-90" />
+              </Button>
+              <div className="absolute left-0 top-[calc(100%-8px)] pt-4 min-w-[220px] opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-50 transform translate-y-2 group-hover:translate-y-0">
+                <div className="bg-white border border-emerald-100 rounded-xl shadow-xl overflow-hidden">
+                  <ul className="py-2">
+                    <li>
+                      <button
+                        className="w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
+                        onClick={() => setActiveCalculator('borrowing')}
+                      >
+                        Borrowing Power
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
+                        onClick={() => setActiveCalculator('stampduty')}
+                      >
+                        Stamp Duty Calculator
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
+                        onClick={() => setActiveCalculator('home')}
+                      >
+                        Home Loan Repayments
+                      </button>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+
+            <div className="relative group">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} flex items-center transition-all duration-200`}
               >
                 <MapPin className="h-4 w-4" />
                 <span className="font-medium">Suburbs</span>
-                <ChevronRight className="h-4 w-4 ml-1 transition-transform duration-200 group-hover:translate-x-1" />
+                <ChevronRight className="h-4 w-4 ml-1 transition-transform duration-200 group-hover:rotate-90" />
               </Button>
-              <div className="absolute left-0 top-full mt-2 min-w-[180px] bg-white border border-emerald-100 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-opacity duration-200 z-50">
-                <ul className="py-2">
-                  <li>
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors duration-150"
-                      onClick={() => setActiveCalculator('suburb')}
-                    >
-                      Suburb Rankings
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                      disabled
-                    >
-                      Compare Suburbs
-                    </button>
-                  </li>
-                  <li>
-                    <button
-                      className="w-full text-left px-4 py-2 text-sm text-emerald-700 hover:bg-emerald-50 transition-colors duration-150"
-                      onClick={() => window.open('/SCORING_V1.md', '_blank')}
-                    >
-                      Methodology
-                    </button>
-                  </li>
-                </ul>
+              <div className="absolute left-0 top-[calc(100%-8px)] pt-4 min-w-[200px] opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition-all duration-200 z-50 transform translate-y-2 group-hover:translate-y-0">
+                <div className="bg-white border border-emerald-100 rounded-xl shadow-xl overflow-hidden">
+                  <ul className="py-2">
+                    <li>
+                      <Link
+                        to="/suburbs/rankings"
+                        className="block w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
+                      >
+                        Suburb Rankings
+                      </Link>
+                    </li>
+                    <li>
+                      <button
+                        className="w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
+                        onClick={() => setActiveCalculator('suburb')}
+                      >
+                        Compare Suburbs
+                      </button>
+                    </li>
+                    <li>
+                      <button
+                        className="w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
+                        onClick={() => window.open('/SCORING_V1.md', '_blank')}
+                      >
+                        Ranking Methodology
+                      </button>
+                    </li>
+                  </ul>
+                </div>
               </div>
             </div>
-          </nav>
 
-          <div className="hidden lg:flex items-center gap-3">
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => setActiveCalculator('home')}
-              className={scrolled ? 'text-slate-800' : 'text-amber-300'}
+              onClick={() => setActiveCalculator('savings')}
+              className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} transition-all`}
             >
-              Calculators
+              <PiggyBank className="h-4 w-4" />
+              <span className="font-medium">Savings</span>
             </Button>
+            
+            <Button
+              variant="ghost"
+              size="sm"
+              className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} transition-all`}
+            >
+              <ExternalLink className="h-4 w-4" />
+              <span className="font-medium">Resources</span>
+            </Button>
+          </nav>
+
+          <div className="hidden lg:flex items-center gap-3">
             <Button
               size="sm"
               onClick={() => setActiveCalculator('borrowing')}
               className="gradient-aussie text-white rounded-full px-6 hover:opacity-90 btn-shine"
             >
-              Get Started
+              Start Planning
               <ArrowRight className="h-4 w-4 ml-1" />
             </Button>
           </div>
@@ -400,48 +471,50 @@ function InnerApp() {
 
                   {/* Headline */}
                   <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight mb-6">
-                    Australian Financial{' '}
+                    Smart Financial &{' '}
                     <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-300 to-amber-500">
-                      Calculators
-                    </span>
+                      Suburb Planning
+                    </span> Tools for Australians
                   </h1>
 
                   {/* Description */}
                   <p className="text-xl md:text-2xl text-white/80 mb-8 max-w-2xl leading-relaxed">
-                    Free, accurate calculators designed for Australians. From home loans to tax,
-                    make informed financial decisions with confidence.
+                    Compare suburbs, calculate borrowing power, estimate stamp duty,
+                    and make smarter home-buying decisions.
                   </p>
+
+                  {/* Hero Search Bar */}
+                  <HeroSearch />
 
                   {/* CTA Buttons */}
                   <div className="flex flex-wrap gap-4 mb-12">
                     <Button
                       size="lg"
-                      onClick={() => setActiveCalculator('home')}
-                      className="bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-full px-8 py-6 text-lg font-semibold btn-shine shadow-xl shadow-amber-400/30"
+                      onClick={() => setActiveCalculator('borrowing')}
+                      className="bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-full px-10 py-7 text-lg font-bold btn-shine shadow-2xl shadow-amber-400/40 transform hover:scale-105 transition-all"
                     >
-                      <Home className="h-5 w-5 mr-2" />
-                      Calculate Home Loan
+                      <TrendingUp className="h-6 w-6 mr-2" />
+                      Calculate Your Borrowing Power
                     </Button>
-                    <Button
-                      size="lg"
-                      variant="outline"
-                      onClick={() => setActiveCalculator('stampduty')}
-                      className="bg-transparent border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg backdrop-blur-sm"
-                    >
-                      <Receipt className="h-5 w-5 mr-2" />
-                      Stamp Duty
-                    </Button>
-                    <Link to="/suburbs/rankings" tabIndex={-1} className="contents">
+                    <Link to="/suburbs/rankings" className="contents">
                       <Button
-                        size="sm"
+                        size="lg"
                         variant="outline"
-                        className="border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full px-6 py-3 text-base font-semibold flex items-center gap-2 shadow-none"
-                        style={{ minWidth: '0' }}
+                        className="bg-white/10 backdrop-blur-sm border-2 border-white/30 text-white hover:bg-white/20 rounded-full px-8 py-7 text-lg font-semibold shadow-xl"
                       >
-                        <MapPin className="h-4 w-4 mr-2 text-emerald-500" />
+                        <MapPin className="h-5 w-5 mr-2 text-emerald-400" />
                         Explore Suburb Rankings
                       </Button>
                     </Link>
+                    <Button
+                      size="lg"
+                      variant="ghost"
+                      onClick={() => setActiveCalculator('stampduty')}
+                      className="text-white hover:bg-white/10 rounded-full px-6 py-7 text-base backdrop-blur-sm"
+                    >
+                      <Receipt className="h-5 w-5 mr-2 opacity-70" />
+                      Stamp Duty Calculator
+                    </Button>
                   </div>
 
                   {/* Trust Indicators */}
@@ -450,13 +523,9 @@ function InnerApp() {
                       <CheckCircle2 className="h-5 w-5 text-emerald-400" />
                       <span className="text-sm">2024-25 Rates</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                      <span className="text-sm">All 8 States</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2 className="h-5 w-5 text-emerald-400" />
-                      <span className="text-sm">Instant Results</span>
+                    <div className="flex items-center gap-2 text-white/50 border-white/10 border-l pl-6">
+                      <Globe className="h-4 w-4" />
+                      <span className="text-xs">Data: ABS, State Property Datasets, Transport Feeds</span>
                     </div>
                   </div>
                 </div>
@@ -470,35 +539,119 @@ function InnerApp() {
               </div>
             </section>
 
-            {/* Top Ranked Suburbs Section */}
-            <section className="py-8 bg-white border-t border-emerald-100">
+            {/* Popular Tools Section */}
+            <section className="py-12 bg-white border-b">
               <div className="container mx-auto px-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-xl md:text-2xl font-bold text-emerald-700">Top Ranked Suburbs Right Now</h2>
+                <div className="flex items-center justify-between mb-8">
+                  <div>
+                    <h2 className="text-2xl font-bold text-slate-800">Popular Tools</h2>
+                    <p className="text-slate-500">Quickly access our most used financial tools</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                  {[
+                    { id: 'home', name: 'Home Loan', icon: <Home className="h-6 w-6" />, color: 'bg-emerald-50 text-emerald-600' },
+                    { id: 'stampduty', name: 'Stamp Duty', icon: <Receipt className="h-6 w-6" />, color: 'bg-amber-50 text-amber-600' },
+                    { id: 'borrowing', name: 'Borrowing Power', icon: <TrendingUp className="h-6 w-6" />, color: 'bg-blue-50 text-blue-600' },
+                    { id: 'savings', name: 'Savings Planner', icon: <PiggyBank className="h-6 w-6" />, color: 'bg-purple-50 text-purple-600' },
+                    { id: 'suburb', name: 'Suburb Compare', icon: <MapPin className="h-6 w-6" />, color: 'bg-cyan-50 text-cyan-600' },
+                  ].map((tool) => (
+                    <button
+                      key={tool.id}
+                      onClick={() => setActiveCalculator(tool.id)}
+                      className="group p-4 bg-white border border-slate-100 rounded-2xl hover:border-emerald-200 hover:shadow-lg hover:shadow-emerald-500/5 transition-all text-center"
+                    >
+                      <div className={`w-12 h-12 rounded-xl ${tool.color} flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
+                        {tool.icon}
+                      </div>
+                      <span className="font-semibold text-slate-700 group-hover:text-emerald-700 transition-colors">{tool.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* Suburb Discovery Section */}
+            <section className="py-20 bg-slate-50">
+              <div className="container mx-auto px-4">
+                <div className="flex flex-col md:flex-row items-end justify-between mb-12 gap-6">
+                  <div className="max-w-2xl">
+                    <Badge className="bg-emerald-100 text-emerald-700 border-0 mb-4 px-3 py-1">Suburb Intelligence</Badge>
+                    <h2 className="text-4xl font-bold text-slate-800 mb-4">Discover Australia's Best Suburbs</h2>
+                    <p className="text-lg text-slate-600">
+                      We've analysed over 18,500 suburbs across Australia using proprietary scoring 
+                      metrics for lifestyle, affordability, and connectivity.
+                    </p>
+                  </div>
                   <Link to="/suburbs/rankings">
-                    <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full px-4 py-2 text-base font-semibold">See Full Rankings</Button>
+                    <Button variant="outline" className="border-emerald-200 text-emerald-700 hover:bg-emerald-50 rounded-full px-8 py-6 text-lg group">
+                      Explore Suburb Rankings
+                      <ArrowRight className="h-5 w-5 ml-2 group-hover:translate-x-1 transition-transform" />
+                    </Button>
                   </Link>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                  {/* Example: Replace with real data fetch if needed */}
-                  {[{
-                    suburbName: 'Sydney', state: 'NSW', overallScore: 92, scoreBreakdown: { affordability: 80, employment: 95, commute: 88, schools: 90, lifestyle: 93 }
-                  }, {
-                    suburbName: 'Melbourne', state: 'VIC', overallScore: 89, scoreBreakdown: { affordability: 78, employment: 90, commute: 85, schools: 88, lifestyle: 91 }
-                  }, {
-                    suburbName: 'Brisbane', state: 'QLD', overallScore: 85, scoreBreakdown: { affordability: 82, employment: 87, commute: 80, schools: 86, lifestyle: 88 }
-                  }].map((suburb, idx) => (
-                    <Link key={idx} to={`/suburbs/${suburb.state.toLowerCase()}/${suburb.suburbName.toLowerCase()}`} className="flex flex-col items-center hover:scale-[1.02] transition-transform duration-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                  {[
+                    { suburbName: 'Bondi', state: 'NSW', overallScore: 74, scoreBreakdown: { affordability: 45, employment: 85, commute: 80, schools: 82, lifestyle: 95 } },
+                    { suburbName: 'Parramatta', state: 'NSW', overallScore: 61, scoreBreakdown: { affordability: 65, employment: 82, commute: 88, schools: 78, lifestyle: 75 } },
+                    { suburbName: 'Sydney', state: 'NSW', overallScore: 52, scoreBreakdown: { affordability: 30, employment: 95, commute: 92, schools: 85, lifestyle: 98 } },
+                  ].map((suburb, idx) => (
+                    <Link key={idx} to={`/suburbs/${suburb.state.toLowerCase()}/${suburb.suburbName.toLowerCase()}`} className="group hover:scale-[1.02] transition-transform duration-300">
                       <SuburbScoreCard
                         suburbName={suburb.suburbName}
                         state={suburb.state}
                         overallScore={suburb.overallScore}
                         scoreBreakdown={suburb.scoreBreakdown}
                       />
-                      <div className="mt-2 text-xs text-slate-500 text-center">
-                        {`Affordability: ${suburb.scoreBreakdown?.affordability ?? '-'} | Employment: ${suburb.scoreBreakdown?.employment ?? '-'} | Commute: ${suburb.scoreBreakdown?.commute ?? '-'}`}
-                      </div>
                     </Link>
+                  ))}
+                </div>
+              </div>
+            </section>
+
+            {/* How It Works Section */}
+            <section className="py-24 bg-white relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-1/3 h-full bg-emerald-50/30 -skew-x-12 transform translate-x-1/2" />
+              <div className="container mx-auto px-4 relative">
+                <div className="text-center max-w-3xl mx-auto mb-16">
+                  <h2 className="text-4xl font-bold text-slate-800 mb-6">How We Rank Suburbs</h2>
+                  <p className="text-xl text-slate-600">
+                    Our data-driven approach combines multiple datasets to give you a clear picture of every Australian suburb.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
+                  {[
+                    {
+                      step: 'Step 1',
+                      title: 'Data Collection',
+                      desc: 'We analyse affordability, employment, commute times, school quality and lifestyle indicators from official sources.',
+                      icon: <Globe className="h-8 w-8" />,
+                    },
+                    {
+                      step: 'Step 2',
+                      title: 'Weighted Scoring',
+                      desc: 'Each suburb receives a weighted score based on proprietary algorithms that balance competing priorities.',
+                      icon: <TrendingUp className="h-8 w-8" />,
+                    },
+                    {
+                      step: 'Step 3',
+                      title: 'Compare & Decide',
+                      desc: 'Use our comparison tools to find the perfect suburb that fits your lifestyle and financial goals.',
+                      icon: <FileSearch className="h-8 w-8" />,
+                    }
+                  ].map((item, i) => (
+                    <div key={i} className="relative">
+                      <div className="w-16 h-16 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shadow-xl shadow-emerald-500/20 mb-8 relative z-10">
+                        {item.icon}
+                        <div className="absolute -top-3 -right-3 w-8 h-8 rounded-full bg-amber-400 text-slate-900 border-4 border-white flex items-center justify-center text-xs font-bold">
+                          {i + 1}
+                        </div>
+                      </div>
+                      <h3 className="text-2xl font-bold text-slate-800 mb-4">{item.title}</h3>
+                      <p className="text-slate-600 leading-relaxed text-lg">{item.desc}</p>
+                      {i < 2 && <ArrowRight className="hidden lg:block absolute top-8 -right-6 text-slate-200 h-8 w-8" />}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -735,9 +888,9 @@ function InnerApp() {
 
             {/* Quick Links */}
             <div>
-              <h4 className="font-semibold text-lg mb-4">Calculators</h4>
+              <h4 className="font-semibold text-lg mb-4 text-white">Calculators</h4>
               <ul className="space-y-3">
-                {calculators.slice(0, 4).map((calc) => (
+                {calculators.map((calc) => (
                   <li key={calc.id}>
                     <button
                       onClick={() => setActiveCalculator(calc.id)}
@@ -751,22 +904,40 @@ function InnerApp() {
             </div>
 
             <div>
-              <h4 className="font-semibold text-lg mb-4">Resources</h4>
+              <h4 className="font-semibold text-lg mb-4 text-white">Suburbs</h4>
               <ul className="space-y-3">
-                <li><button onClick={() => setActiveCalculator('suburb')} className="text-slate-400 hover:text-emerald-400 transition-colors">Suburb Comparison</button></li>
-                <li><a href="/legal/first-home-buyer.html" className="text-slate-400 hover:text-emerald-400 transition-colors">First Home Buyer Guide</a></li>
-                <li><a href="/legal/property-market.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Property Market</a></li>
-                <li><a href="/legal/interest-rates.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Interest Rates</a></li>
+                <li><Link to="/suburbs/rankings" className="text-slate-400 hover:text-emerald-400 transition-colors">Suburb Rankings</Link></li>
+                <li><button onClick={() => setActiveCalculator('suburb')} className="text-slate-400 hover:text-emerald-400 transition-colors">Compare Suburbs</button></li>
+                <li><button onClick={() => window.open('/SCORING_V1.md', '_blank')} className="text-slate-400 hover:text-emerald-400 transition-colors">Ranking Methodology</button></li>
+                <li><a href="/legal/property-market.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Market Reports</a></li>
               </ul>
             </div>
 
             <div>
-              <h4 className="font-semibold text-lg mb-4">Legal</h4>
+              <h4 className="font-semibold text-lg mb-4 text-white">Explore by State</h4>
               <ul className="space-y-3">
-                <li><a href="/legal/privacy.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Privacy Policy</a></li>
-                <li><a href="/legal/terms.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Terms of Use</a></li>
-                <li><a href="/legal/disclaimer.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Disclaimer</a></li>
+                {['NSW', 'VIC', 'QLD', 'WA', 'SA', 'TAS', 'ACT', 'NT'].map(state => (
+                  <li key={state}>
+                    <Link to={`/suburbs/rankings?state=${state}`} className="text-slate-400 hover:text-emerald-400 transition-colors">
+                      {state} Suburbs
+                    </Link>
+                  </li>
+                ))}
               </ul>
+            </div>
+          </div>
+
+          {/* Social Proof Stats */}
+          <div className="border-t border-slate-800 mt-16 pt-12">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center bg-slate-800/50 rounded-3xl py-8 px-4 border border-white/5">
+              {stats.map((stat, index) => (
+                <div key={index}>
+                  <div className="text-2xl md:text-3xl font-bold text-emerald-400 mb-1">
+                    {stat.value}{stat.suffix}
+                  </div>
+                  <div className="text-slate-400 text-xs uppercase tracking-wider font-semibold">{stat.label}</div>
+                </div>
+              ))}
             </div>
           </div>
 

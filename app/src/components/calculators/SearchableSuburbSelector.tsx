@@ -49,8 +49,8 @@ export function SearchableSuburbSelector({ selectedSuburb, onSuburbChange, label
     fetch(`/api/dropdowns/search?q=${encodeURIComponent(searchQuery)}`)
       .then(res => res.ok ? res.json() : Promise.reject())
       .then(data => {
-        // Handle both old direct array and new {results: []} format
-        const items = Array.isArray(data) ? data : (data?.results || []);
+        // Handle both old direct array and new {data: []} or {results: []} format
+        const items = Array.isArray(data) ? data : (data?.data || data?.results || []);
         setSuburbs(items);
       })
       .catch(() => setSuburbs([]))
