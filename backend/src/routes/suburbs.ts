@@ -1,8 +1,25 @@
 import { Router } from 'express';
 import { ExternalDataService } from '../externalDataService';
-import { getSuburbWithPostcodes } from '../services/dropdownService';
+import { getSuburbWithPostcodes, searchSuburbs, getNearbySuburbs } from '../services/dropdownService';
 
 const router = Router();
+
+/**
+ * GET /api/suburbs/search
+ * Returns suburbs matching a query string
+ */
+router.get('/search', async (req, res) => {
+  const query = (req.query.query as string) || '';
+  if (!query) return res.json({ data: [] });
+
+  try {
+    const results = await searchSuburbs(query);
+    res.json({ data: results });
+  } catch (err: any) {
+    console.error('Error in suburb search route:', err);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
 
 /**
  * GET /api/suburbs/:id/details
@@ -40,6 +57,24 @@ router.get('/:id/details', async (req, res) => {
   } catch (err: any) {
     console.error('Error in suburb details route:', err);
     res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
+
+/**
+ * GET /api/suburbs/:id/nearby
+ * Returns nearby suburbs for a given ID
+ */
+router.get('/:id/nearby', async (req, res) => {
+  const id = req.params.id;
+  const postcode = req.query.postcode as string;
+  const state = req.query.state as string;
+
+  try {
+    const nearby = await getNearbySuburbs(id, postcode, state);
+    res.json({ data: nearby });
+  } catch (err: any) {
+    console.error('Error in nearby suburbs route:', err);
+    res.status(500).json({ message: 'Internal server error' });
   }
 });
 

@@ -1,0 +1,237 @@
+"use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getAllSuburbsForDropdown = getAllSuburbsForDropdown;
+exports.searchSuburbs = searchSuburbs;
+exports.getSuburbWithPostcodes = getSuburbWithPostcodes;
+const sqlite3_1 = __importDefault(require("sqlite3"));
+const path_1 = __importDefault(require("path"));
+let dbPath = path_1.default.resolve(__dirname, '../../suburbs.db');
+let logPath = path_1.default.resolve(__dirname, '../logs/backend.log');
+let logMsg;
+console.log('dropdownService.ts: DB absolute path:', dbPath);
+try {
+    dbPath = path_1.default.resolve(__dirname, '../../suburbs.db');
+    console.log('DROPDOWN SERVICE: Using suburbs.db at:', dbPath);
+    logPath = path_1.default.resolve(__dirname, '../logs/backend.log');
+    logMsg = `[DROPDOWN SERVICE] Using suburbs.db at: ${dbPath}\nDB PATH: ${dbPath}`;
+    console.log(logMsg);
+    require('fs').mkdirSync(path_1.default.dirname(logPath), { recursive: true });
+    require('fs').appendFileSync(logPath, logMsg + '\n');
+    require('fs').appendFileSync('test.log', 'dropdownService.ts: resolved dbPath and logPath\n');
+}
+catch (e) {
+    console.error('dropdownService.ts: failed to resolve dbPath/logPath or write logs:', e);
+}
+try {
+    if (!require('fs').existsSync(dbPath)) {
+        console.error('ERROR: suburbs.db file does not exist at resolved path:', dbPath);
+        require('fs').appendFileSync('test.log', 'dropdownService.ts: suburbs.db file does not exist at resolved path\n');
+    }
+}
+catch (e) {
+    console.error('dropdownService.ts: error checking suburbs.db existence:', e);
+}
+/**
+ * Get all suburbs for dropdown
+ */
+function getAllSuburbsForDropdown(state) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3_1.default.Database(dbPath, (err) => {
+            if (err)
+                return reject(err);
+            let sql = `
+        SELECT DISTINCT
+          SAL_ID,
+          Suburb_Name,
+          SAL_CODE_2021,
+          State,
+          Postcode,
+          Population,
+          Median_Age,
+          Median_Income_Weekly,
+          Median_House_Price,
+          One_Year_Growth_Pct,
+          Median_Rent_Weekly,
+          HH_Size,
+          School_Count,
+          Commute_Time_Mins,
+          Parks_Count,
+          Rental_Yield_Pct
+        FROM suburbs
+        WHERE SAL_ID IS NOT NULL
+      `;
+            const params = [];
+            if (state) {
+                sql += ` AND State = ?`;
+                params.push(state.toUpperCase());
+            }
+            sql += ` ORDER BY Suburb_Name, State`;
+            db.all(sql, params, (err, rows) => {
+                db.close();
+                if (err)
+                    return reject(err);
+                const dropdownData = (rows || []).map(row => ({
+                    id: row.SAL_ID,
+                    label: `${row.Suburb_Name}, ${row.State} ${row.Postcode}`,
+                    suburb_name: row.Suburb_Name,
+                    sal_code_2021: row.SAL_CODE_2021,
+                    state: row.State,
+                    postcode: row.Postcode,
+                    population: row.Population,
+                    median_age: row.Median_Age,
+                    median_income: row.Median_Income_Weekly,
+                    median_house_price: row.Median_House_Price,
+                    one_year_growth: row.One_Year_Growth_Pct,
+                    median_rent: row.Median_Rent_Weekly,
+                    hh_size: row.HH_Size,
+                    employment_rate: 0, // Not in suburbs table
+                    school_count: row.School_Count,
+                    commute_time: row.Commute_Time_Mins,
+                    parks_count: row.Parks_Count,
+                    rental_yield: row.Rental_Yield_Pct,
+                    all_postcodes: [row.Postcode].filter(Boolean),
+                    ssc: row.SAL_ID,
+                    searchText: `${row.Suburb_Name} ${row.State} ${row.Postcode}`.toLowerCase()
+                }));
+                resolve(dropdownData);
+            });
+        });
+    });
+}
+/**
+ * Search suburbs by name or postcode with optional state
+ */
+async function searchSuburbs(query, state) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3_1.default.Database(dbPath, (err) => {
+            if (err)
+                return reject(err);
+            const normalizedQuery = query.trim().toUpperCase();
+            let sql = `
+        SELECT DISTINCT
+          SAL_ID,
+          Suburb_Name,
+          SAL_CODE_2021,
+          State,
+          Postcode,
+          Population,
+          Median_Age,
+          Median_Income_Weekly,
+          Median_House_Price,
+          One_Year_Growth_Pct,
+          Median_Rent_Weekly,
+          HH_Size,
+          School_Count,
+          Commute_Time_Mins,
+          Parks_Count,
+          Rental_Yield_Pct
+        FROM suburbs
+        WHERE SAL_ID IS NOT NULL
+          AND (
+            UPPER(Suburb_Name) LIKE ?
+            OR UPPER(Postcode) = ?
+          )
+      `;
+            const params = [`%${normalizedQuery}%`, normalizedQuery];
+            if (state) {
+                sql += ` AND State = ?`;
+                params.push(state.toUpperCase());
+            }
+            sql += ` ORDER BY Suburb_Name LIMIT 50`;
+            db.all(sql, params, (err, rows) => {
+                db.close();
+                if (err)
+                    return reject(err);
+                const results = (rows || []).map(row => ({
+                    id: row.SAL_ID,
+                    label: `${row.Suburb_Name}, ${row.State} ${row.Postcode}`,
+                    suburb_name: row.Suburb_Name,
+                    sal_code_2021: row.SAL_CODE_2021,
+                    state: row.State,
+                    postcode: row.Postcode,
+                    population: row.Population,
+                    median_age: row.Median_Age,
+                    median_income: row.Median_Income_Weekly,
+                    median_house_price: row.Median_House_Price,
+                    one_year_growth: row.One_Year_Growth_Pct,
+                    median_rent: row.Median_Rent_Weekly,
+                    hh_size: row.HH_Size,
+                    employment_rate: 0, // Not in suburbs table
+                    school_count: row.School_Count,
+                    commute_time: row.Commute_Time_Mins,
+                    parks_count: row.Parks_Count,
+                    rental_yield: row.Rental_Yield_Pct,
+                    all_postcodes: [row.Postcode].filter(Boolean),
+                    ssc: row.SAL_ID
+                }));
+                resolve(results);
+            });
+        });
+    });
+}
+/**
+ * Get single suburb with all postcode options
+ */
+function getSuburbWithPostcodes(ssc) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3_1.default.Database(dbPath, (err) => {
+            if (err)
+                return reject(err);
+            db.get(`
+        SELECT 
+          SAL_ID AS ssc,
+          Suburb_Name AS suburb_name,
+          SAL_CODE_2021 AS sal_code_2021,
+          State AS state,
+          Postcode AS postcode,
+          Population AS population,
+          Median_Age AS median_age,
+          Median_Income_Weekly AS median_income,
+          Median_House_Price AS median_house_price,
+          One_Year_Growth_Pct AS one_year_growth,
+          Median_Rent_Weekly AS median_rent,
+          HH_Size AS hh_size,
+          School_Count AS school_count,
+          Commute_Time_Mins AS commute_time,
+          Parks_Count AS parks_count,
+          Rental_Yield_Pct AS rental_yield
+        FROM suburbs
+        WHERE SAL_ID = ? LIMIT 1
+      `, [ssc], (err, row) => {
+                db.close();
+                if (err)
+                    return reject(err);
+                if (!row)
+                    return resolve(null);
+                resolve({
+                    id: row.ssc,
+                    label: `${row.suburb_name}, ${row.state} ${row.postcode}`,
+                    suburb_name: row.suburb_name,
+                    state: row.state,
+                    postcode: row.postcode,
+                    population: row.population ?? 0,
+                    median_age: row.median_age ?? 0,
+                    median_income: row.median_income ?? 0,
+                    median_house_price: row.median_house_price ?? 0,
+                    one_year_growth: row.one_year_growth ?? 0,
+                    median_rent: row.median_rent ?? 0,
+                    hh_size: row.hh_size ?? 0,
+                    employment_rate: 0, // Not in suburbs table
+                    school_count: row.school_count ?? 0,
+                    commute_time: row.commute_time ?? 0,
+                    parks_count: row.parks_count ?? 0,
+                    rental_yield: row.rental_yield ?? 0,
+                    sal_code_2021: row.sal_code_2021 ?? '',
+                    all_postcodes: [row.postcode].filter(Boolean),
+                    ssc: row.ssc,
+                    display: `${row.suburb_name}, ${row.state} ${row.postcode}`,
+                    searchText: `${row.suburb_name} ${row.state} ${row.postcode}`.toLowerCase(),
+                });
+            });
+        });
+    });
+}
+//# sourceMappingURL=dropdownService.js.map

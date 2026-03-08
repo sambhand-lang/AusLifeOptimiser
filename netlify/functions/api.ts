@@ -167,6 +167,12 @@ const handler: Handler = async (event) => {
         realTimeData.medianIncome = formatMetric('median_income', demographics);
       }
 
+      // Merge metrics directly out of suburbs.db since we've synced JSON dumps
+      if (suburb.median_house_price != null) realTimeData.medianHousePrice = { value: suburb.median_house_price, datasetYear: 2026, type: 'official_dataset' };
+      if (suburb.one_year_growth != null) realTimeData.oneYearGrowth = { value: suburb.one_year_growth, datasetYear: 2026, type: 'official_dataset' };
+      if (suburb.median_rent != null) realTimeData.medianRent = { value: suburb.median_rent, datasetYear: 2026, type: 'official_dataset' };
+      if (suburb.rental_yield != null) realTimeData.rentalYield = { value: suburb.rental_yield, datasetYear: 2026, type: 'official_dataset' };
+
       // Get additional amenity metrics
       const suburb_name_upper = String(suburb.suburb_name).toUpperCase();
       const suburb_state = suburb.state || (demographics && demographics.state) || 'NSW';
@@ -215,9 +221,9 @@ const handler: Handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify(result) };
     }
 
-    // GET /api/suburbs/search
-    if (method === 'GET' && (pathStr.includes('/suburbs/search') || pathStr.includes('suburbs/search'))) {
-      const q = (event.queryStringParameters?.query || '').toLowerCase();
+    // GET /api/suburbs/search or /api/dropdowns/search
+    if (method === 'GET' && (pathStr.includes('/suburbs/search') || pathStr.includes('suburbs/search') || pathStr.includes('/dropdowns/search') || pathStr.includes('dropdowns/search'))) {
+      const q = (event.queryStringParameters?.query || event.queryStringParameters?.q || '').toLowerCase();
       if (!q || q.length < 1) return { statusCode: 200, body: JSON.stringify({ data: [] }) };
       const suburbs = suburbsData();
       const results = suburbs

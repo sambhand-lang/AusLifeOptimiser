@@ -1,5 +1,8 @@
 import React from "react";
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
+
 interface ScoreBreakdown {
   affordability?: number;
   employment?: number;
@@ -13,6 +16,8 @@ interface SuburbScoreCardProps {
   state: string;
   overallScore: number;
   scoreBreakdown?: ScoreBreakdown;
+  rank?: number;
+  totalSuburbs?: number;
 }
 
 function getScoreColor(score: number): string {
@@ -21,12 +26,12 @@ function getScoreColor(score: number): string {
   return "from-rose-400 to-red-600";
 }
 
-const breakdownLabels: { key: keyof ScoreBreakdown; label: string; color: string }[] = [
-  { key: "affordability", label: "Affordability", color: "bg-emerald-400" },
-  { key: "employment", label: "Employment", color: "bg-amber-400" },
-  { key: "commute", label: "Commute", color: "bg-cyan-400" },
-  { key: "schools", label: "Schools", color: "bg-blue-400" },
-  { key: "lifestyle", label: "Lifestyle", color: "bg-pink-400" },
+const breakdownLabels: { key: keyof ScoreBreakdown; label: string; color: string; description: string }[] = [
+  { key: "affordability", label: "Affordability", color: "bg-emerald-400", description: "Based on median house prices, rent, and local income levels." },
+  { key: "employment", label: "Employment", color: "bg-amber-400", description: "Based on median weekly household income and local economic activity." },
+  { key: "commute", label: "Commute", color: "bg-cyan-400", description: "Analysis of driving times and public transport proximity to CBD." },
+  { key: "schools", label: "Schools", color: "bg-blue-400", description: "Density of primary and secondary schools within the suburb area." },
+  { key: "lifestyle", label: "Lifestyle", color: "bg-pink-400", description: "Richness of amenities: Parks, Cafes, Recreation, and Walkability." },
 ];
 
 export const SuburbScoreCard: React.FC<SuburbScoreCardProps> = ({
@@ -34,6 +39,8 @@ export const SuburbScoreCard: React.FC<SuburbScoreCardProps> = ({
   state,
   overallScore,
   scoreBreakdown = {},
+  rank,
+  totalSuburbs
 }) => {
   const scoreColor = getScoreColor(overallScore);
 
@@ -48,6 +55,11 @@ export const SuburbScoreCard: React.FC<SuburbScoreCardProps> = ({
       <div className="text-center">
         <div className="text-xl font-bold text-emerald-700">{suburbName}</div>
         <div className="text-sm text-emerald-400 font-medium">{state}</div>
+        {rank && totalSuburbs && (
+          <div className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+            Ranked #{rank.toLocaleString()} of {totalSuburbs.toLocaleString()} in Australia
+          </div>
+        )}
       </div>
       {/* Breakdown Bars */}
       <div className="w-full flex flex-col gap-3">
@@ -56,9 +68,21 @@ export const SuburbScoreCard: React.FC<SuburbScoreCardProps> = ({
           if (value == null) return null;
           return (
             <div key={key} className="flex flex-col gap-1">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium text-slate-600">{label}</span>
-                <span className="text-xs font-bold text-slate-700">{Math.round(value)}</span>
+              <div className="flex justify-between items-center px-1">
+                <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-semibold text-slate-700 uppercase tracking-wide">{label}</span>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger>
+                                <Info className="h-3 w-3 text-slate-300 hover:text-slate-500 transition-colors" />
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="bg-slate-800 text-white text-[10px] border-0 rounded-lg shadow-xl">
+                                {breakdownLabels.find(l => l.key === key)?.description}
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                </div>
+                <span className="text-xs font-bold text-emerald-600">{Math.round(value)}</span>
               </div>
               <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div

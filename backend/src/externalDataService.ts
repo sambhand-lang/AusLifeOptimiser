@@ -85,10 +85,20 @@ export class ExternalDataService {
     householdSize?: number;
     employmentRate?: number;
     medianIncome?: number;
+    medianHousePrice?: number;
+    oneYearGrowth?: number;
+    medianRent?: number;
+    rentalYield?: number;
+    cafeCount?: number;
+    restaurantCount?: number;
+    gymCount?: number;
+    cinemaCount?: number;
+    libraryCount?: number;
+    sportsFieldCount?: number;
   }> {
     try {
       const res = await query(
-        'SELECT Population, Median_Age, HH_Size, Median_Income_Weekly FROM suburbs WHERE UPPER(Suburb_Name) = ? AND State = ? LIMIT 1',
+        'SELECT Population, Median_Age, HH_Size, Median_Income_Weekly, Median_House_Price, One_Year_Growth_Pct, Median_Rent_Weekly, Rental_Yield_Pct, Cafe_Count, Restaurant_Count, Gym_Count, Cinema_Count, Library_Count, Sports_Field_Count FROM suburbs WHERE UPPER(Suburb_Name) = ? AND State = ? LIMIT 1',
         [suburbName.toUpperCase(), state.toUpperCase()]
       );
       if (res.rows.length === 0) return {};
@@ -98,7 +108,17 @@ export class ExternalDataService {
         medianAge: row.Median_Age ?? undefined,
         householdSize: row.HH_Size ?? undefined,
         employmentRate: 0, // Not currently in suburbs table
-        medianIncome: row.Median_Income_Weekly ?? undefined
+        medianIncome: row.Median_Income_Weekly ?? undefined,
+        medianHousePrice: row.Median_House_Price ?? undefined,
+        oneYearGrowth: row.One_Year_Growth_Pct ?? undefined,
+        medianRent: row.Median_Rent_Weekly ?? undefined,
+        rentalYield: row.Rental_Yield_Pct ?? undefined,
+        cafeCount: row.Cafe_Count ?? 0,
+        restaurantCount: row.Restaurant_Count ?? 0,
+        gymCount: row.Gym_Count ?? 0,
+        cinemaCount: row.Cinema_Count ?? 0,
+        libraryCount: row.Library_Count ?? 0,
+        sportsFieldCount: row.Sports_Field_Count ?? 0
       };
     } catch (err) {
       console.error('getAbsMetrics error', err);
@@ -239,6 +259,42 @@ export class ExternalDataService {
       };
     }
 
+    if (absMetrics.medianHousePrice != null) {
+      (result as any).medianHousePrice = {
+        value: absMetrics.medianHousePrice,
+        source: `Suburbs Database (SAL ${sa2Code || 'N/A'})`,
+        datasetYear: 2026,
+        type: 'official_dataset'
+      };
+    }
+
+    if (absMetrics.oneYearGrowth != null) {
+      (result as any).oneYearGrowth = {
+        value: absMetrics.oneYearGrowth,
+        source: `Suburbs Database (SAL ${sa2Code || 'N/A'})`,
+        datasetYear: 2026,
+        type: 'official_dataset'
+      };
+    }
+
+    if (absMetrics.medianRent != null) {
+      (result as any).medianRent = {
+        value: absMetrics.medianRent,
+        source: `Suburbs Database (SAL ${sa2Code || 'N/A'})`,
+        datasetYear: 2026,
+        type: 'official_dataset'
+      };
+    }
+
+    if (absMetrics.rentalYield != null) {
+      (result as any).rentalYield = {
+        value: absMetrics.rentalYield,
+        source: `Suburbs Database (SAL ${sa2Code || 'N/A'})`,
+        datasetYear: 2026,
+        type: 'official_dataset'
+      };
+    }
+
     // OpenRouteService - Official API source (only if data available)
     // Methodology: Routing from suburb centroid to Sydney Town Hall (CBD reference point)
     // Route type: Car - driving route following road networks
@@ -297,6 +353,18 @@ export class ExternalDataService {
         type: 'official_dataset',
         reliability: 'verified_spatial_count'
       };
+    }
+
+    // New Amenity Metrics
+    if (absMetrics.cafeCount != null) {
+      (result as any).cafes = { value: absMetrics.cafeCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };
+    }
+    if (absMetrics.restaurantCount != null) {
+      (result as any).restaurants = { value: absMetrics.restaurantCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };
+    }
+    const recreationCount = (absMetrics.gymCount || 0) + (absMetrics.cinemaCount || 0) + (absMetrics.sportsFieldCount || 0) + (absMetrics.libraryCount || 0);
+    if (recreationCount > 0) {
+      (result as any).recreation = { value: recreationCount, source: 'Suburbs Database - OSM Enrichment', datasetYear: 2026, type: 'derived_metric' };
     }
 
     // Add SA2 metadata and data integrity information

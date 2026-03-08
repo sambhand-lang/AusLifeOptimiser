@@ -1,5 +1,5 @@
 // utils/rankingPipeline.ts
-import { SuburbData } from './suburbScoring';
+import type { SuburbData } from './suburbScoring';
 import { generateBenchmarks } from './benchmarkUtils';
 import { calculateSuburbScore } from './suburbScoring';
 

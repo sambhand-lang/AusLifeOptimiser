@@ -1,10 +1,13 @@
 import { useState, useEffect } from 'react';
-import { 
-  Calculator, 
-  Home, 
-  TrendingUp, 
-  PiggyBank, 
-  Receipt, 
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom';
+import { SuburbDetail } from '@/pages/SuburbDetail';
+import { SuburbRankings } from '@/pages/SuburbRankings';
+import {
+  Calculator,
+  Home,
+  TrendingUp,
+  PiggyBank,
+  Receipt,
   MapPin,
   Menu,
   X,
@@ -29,6 +32,7 @@ import { SavingsCalculator } from '@/components/calculators/SavingsCalculator';
 import { TaxCalculator } from '@/components/calculators/TaxCalculator';
 import { SuburbComparison2 } from '@/components/calculators/SuburbComparison2';
 import './App.css';
+import { SuburbScoreCard } from '@/components/suburbs/SuburbScoreCard';
 
 type CalculatorType = 'home' | 'stampduty' | 'borrowing' | 'savings' | 'tax' | 'suburb';
 
@@ -127,8 +131,19 @@ const stats = [
   { value: '100', label: 'Free Forever', suffix: '%' },
 ];
 
-function App() {
-  const [activeCalculator, setActiveCalculator] = useState<CalculatorType | null>(null);
+function InnerApp() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeCalcParam = location.pathname.startsWith('/calculator/') ? location.pathname.split('/calculator/')[1] : null;
+  const activeCalculatorPath = location.pathname === '/suburbs/compare' ? 'suburb' : activeCalcParam;
+  const activeCalculator = activeCalculatorPath as CalculatorType | null;
+  
+  const setActiveCalculator = (calc: string | null) => {
+    if (calc === null) navigate('/');
+    else if (calc === 'suburb') navigate('/suburbs/compare');
+    else navigate(`/calculator/${calc}`);
+  };
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
@@ -162,15 +177,14 @@ function App() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       {/* Navigation */}
-      <header 
-        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          scrolled 
-            ? 'bg-white/90 backdrop-blur-xl shadow-lg shadow-black/5' 
+      <header
+        className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled
+            ? 'bg-white/90 backdrop-blur-xl shadow-lg shadow-black/5'
             : 'bg-transparent'
-        }`}
+          }`}
       >
         <div className="container mx-auto px-4 h-20 flex items-center justify-between">
-          <div 
+          <div
             className="flex items-center gap-3 cursor-pointer group"
             onClick={() => setActiveCalculator(null)}
           >
@@ -198,11 +212,10 @@ function App() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setActiveCalculator(calc.id)}
-                className={`gap-2 rounded-full px-4 transition-all ${
-                  activeCalculator === calc.id
+                className={`gap-2 rounded-full px-4 transition-all ${activeCalculator === calc.id
                     ? 'bg-amber-100 text-amber-700'
                     : `hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'}`
-                }`}
+                  }`}
               >
                 {calc.icon}
                 <span className="font-medium">{calc.shortName}</span>
@@ -259,7 +272,7 @@ function App() {
             >
               Calculators
             </Button>
-            <Button 
+            <Button
               size="sm"
               onClick={() => setActiveCalculator('borrowing')}
               className="gradient-aussie text-white rounded-full px-6 hover:opacity-90 btn-shine"
@@ -291,11 +304,10 @@ function App() {
                     setActiveCalculator(calc.id);
                     setMobileMenuOpen(false);
                   }}
-                  className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${
-                    activeCalculator === calc.id 
-                      ? 'bg-emerald-50 border-2 border-emerald-200' 
+                  className={`w-full flex items-center gap-4 p-4 rounded-xl transition-all ${activeCalculator === calc.id
+                      ? 'bg-emerald-50 border-2 border-emerald-200'
                       : 'hover:bg-slate-50 border-2 border-transparent'
-                  }`}
+                    }`}
                 >
                   <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${calc.color} flex items-center justify-center text-white shadow-lg`}>
                     {calc.icon}
@@ -319,6 +331,11 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1">
+        <Routes>
+          <Route path="/suburbs/rankings" element={<SuburbRankings />} />
+          <Route path="/suburbs/:state/:name" element={<SuburbDetail />} />
+          <Route path="*" element={
+            <>
         {activeCalculator ? (
           <div className="pt-28 pb-12 bg-slate-50/50 min-h-screen">
             <div className="container mx-auto px-4">
@@ -363,9 +380,9 @@ function App() {
             <section className="relative min-h-screen flex items-center">
               {/* Background Image */}
               <div className="absolute inset-0 z-0">
-                <img 
-                  src="/hero-australia.jpg" 
-                  alt="Australian landscape" 
+                <img
+                  src="/hero-australia.jpg"
+                  alt="Australian landscape"
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-r from-slate-900/90 via-slate-900/70 to-transparent" />
@@ -391,22 +408,22 @@ function App() {
 
                   {/* Description */}
                   <p className="text-xl md:text-2xl text-white/80 mb-8 max-w-2xl leading-relaxed">
-                    Free, accurate calculators designed for Australians. From home loans to tax, 
+                    Free, accurate calculators designed for Australians. From home loans to tax,
                     make informed financial decisions with confidence.
                   </p>
 
                   {/* CTA Buttons */}
                   <div className="flex flex-wrap gap-4 mb-12">
-                    <Button 
-                      size="lg" 
+                    <Button
+                      size="lg"
                       onClick={() => setActiveCalculator('home')}
                       className="bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-full px-8 py-6 text-lg font-semibold btn-shine shadow-xl shadow-amber-400/30"
                     >
                       <Home className="h-5 w-5 mr-2" />
                       Calculate Home Loan
                     </Button>
-                    <Button 
-                      size="lg" 
+                    <Button
+                      size="lg"
                       variant="outline"
                       onClick={() => setActiveCalculator('stampduty')}
                       className="bg-transparent border-2 border-white/30 text-white hover:bg-white/10 rounded-full px-8 py-6 text-lg backdrop-blur-sm"
@@ -414,17 +431,17 @@ function App() {
                       <Receipt className="h-5 w-5 mr-2" />
                       Stamp Duty
                     </Button>
-                      <a href="/suburbs/rankings" tabIndex={-1} className="contents">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full px-6 py-3 text-base font-semibold flex items-center gap-2 shadow-none"
-                          style={{ minWidth: '0' }}
-                        >
-                          <MapPin className="h-4 w-4 mr-2 text-emerald-500" />
-                          Explore Suburb Rankings
-                        </Button>
-                      </a>
+                    <Link to="/suburbs/rankings" tabIndex={-1} className="contents">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="border-2 border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full px-6 py-3 text-base font-semibold flex items-center gap-2 shadow-none"
+                        style={{ minWidth: '0' }}
+                      >
+                        <MapPin className="h-4 w-4 mr-2 text-emerald-500" />
+                        Explore Suburb Rankings
+                      </Button>
+                    </Link>
                   </div>
 
                   {/* Trust Indicators */}
@@ -458,9 +475,9 @@ function App() {
               <div className="container mx-auto px-4">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-xl md:text-2xl font-bold text-emerald-700">Top Ranked Suburbs Right Now</h2>
-                  <a href="/suburbs/rankings">
+                  <Link to="/suburbs/rankings">
                     <Button size="sm" variant="outline" className="border-emerald-300 text-emerald-700 hover:bg-emerald-50 rounded-full px-4 py-2 text-base font-semibold">See Full Rankings</Button>
-                  </a>
+                  </Link>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
                   {/* Example: Replace with real data fetch if needed */}
@@ -471,7 +488,7 @@ function App() {
                   }, {
                     suburbName: 'Brisbane', state: 'QLD', overallScore: 85, scoreBreakdown: { affordability: 82, employment: 87, commute: 80, schools: 86, lifestyle: 88 }
                   }].map((suburb, idx) => (
-                    <div key={idx} className="flex flex-col items-center">
+                    <Link key={idx} to={`/suburbs/${suburb.state.toLowerCase()}/${suburb.suburbName.toLowerCase()}`} className="flex flex-col items-center hover:scale-[1.02] transition-transform duration-200">
                       <SuburbScoreCard
                         suburbName={suburb.suburbName}
                         state={suburb.state}
@@ -481,7 +498,7 @@ function App() {
                       <div className="mt-2 text-xs text-slate-500 text-center">
                         {`Affordability: ${suburb.scoreBreakdown?.affordability ?? '-'} | Employment: ${suburb.scoreBreakdown?.employment ?? '-'} | Commute: ${suburb.scoreBreakdown?.commute ?? '-'}`}
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -538,7 +555,7 @@ function App() {
             <section className="py-20 relative overflow-hidden">
               {/* Background */}
               <div className="absolute inset-0 gradient-aussie-hero opacity-5" />
-              
+
               <div className="container mx-auto px-4 relative">
                 <div className="text-center max-w-2xl mx-auto mb-16">
                   <Badge className="bg-amber-100 text-amber-700 border-amber-200 mb-4">
@@ -554,7 +571,7 @@ function App() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {calculators.map((calc) => (
-                    <Card 
+                    <Card
                       key={calc.id}
                       className="group cursor-pointer border-0 shadow-xl shadow-slate-200/50 bg-white overflow-hidden card-lift"
                       onClick={() => setActiveCalculator(calc.id)}
@@ -577,14 +594,14 @@ function App() {
                             </div>
                           )}
                         </div>
-                        
+
                         {/* Content */}
                         <div className="p-6">
                           <h3 className="text-xl font-bold text-slate-800 mb-2 group-hover:text-emerald-600 transition-colors">
                             {calc.name}
                           </h3>
                           <p className="text-slate-600 mb-4 line-clamp-2">{calc.description}</p>
-                          
+
                           <div className="flex items-center text-emerald-600 font-semibold group-hover:gap-3 transition-all">
                             <span>Open Calculator</span>
                             <ArrowRight className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" />
@@ -603,9 +620,9 @@ function App() {
                 <div className="relative rounded-3xl overflow-hidden">
                   {/* Background */}
                   <div className="absolute inset-0">
-                    <img 
-                      src="/finance-abstract.jpg" 
-                      alt="Finance" 
+                    <img
+                      src="/finance-abstract.jpg"
+                      alt="Finance"
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-r from-emerald-900/95 to-emerald-800/80" />
@@ -616,11 +633,11 @@ function App() {
                       Ready to Calculate?
                     </h2>
                     <p className="text-xl text-white/80 mb-8 max-w-2xl mx-auto">
-                      Start using our free calculators to plan your financial future. 
+                      Start using our free calculators to plan your financial future.
                       No sign-up, no fees, just accurate results.
                     </p>
                     <div className="flex flex-wrap justify-center gap-4">
-                      <Button 
+                      <Button
                         size="lg"
                         onClick={() => setActiveCalculator('borrowing')}
                         className="bg-amber-400 hover:bg-amber-500 text-slate-900 rounded-full px-8 py-6 text-lg font-semibold btn-shine"
@@ -628,7 +645,7 @@ function App() {
                         <TrendingUp className="h-5 w-5 mr-2" />
                         Check Borrowing Power
                       </Button>
-                      <Button 
+                      <Button
                         size="lg"
                         variant="outline"
                         onClick={() => setActiveCalculator('tax')}
@@ -688,6 +705,9 @@ function App() {
             </section>
           </div>
         )}
+            </>
+          } />
+        </Routes>
       </main>
 
       {/* Footer */}
@@ -719,7 +739,7 @@ function App() {
               <ul className="space-y-3">
                 {calculators.slice(0, 4).map((calc) => (
                   <li key={calc.id}>
-                    <button 
+                    <button
                       onClick={() => setActiveCalculator(calc.id)}
                       className="text-slate-400 hover:text-emerald-400 transition-colors"
                     >
@@ -765,4 +785,10 @@ function App() {
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <Router>
+      <InnerApp />
+    </Router>
+  );
+}

@@ -36,7 +36,7 @@ export function SearchableSuburbSelector({ selectedSuburb, onSuburbChange, label
       id: 0,
       suburb_name: parts[0]?.trim() || '',
       postcode: parts[1]?.trim() || '',
-      state: '',
+      state: parts[2]?.trim() || '',
     });
   }, [selectedSuburb]);
 
@@ -58,7 +58,7 @@ export function SearchableSuburbSelector({ selectedSuburb, onSuburbChange, label
   }, [searchQuery]);
 
   const handleSelect = (suburb: SuburbData) => {
-    onSuburbChange(`${suburb.suburb_name}|${suburb.postcode}`);
+    onSuburbChange(`${suburb.suburb_name}|${suburb.postcode}|${suburb.state}`);
     setOpen(false);
     setSearchQuery('');
   };
@@ -114,7 +114,7 @@ export function SearchableSuburbSelector({ selectedSuburb, onSuburbChange, label
                   onClick={() => handleSelect(suburb)}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">{suburb.suburb_name}</span>
+                    <span className="text-sm font-medium">{suburb.suburb_name} <span className="text-gray-400 text-xs ml-1">{suburb.state}</span></span>
                     <Badge className="text-xs bg-emerald-600">{suburb.postcode}</Badge>
                   </div>
                 </div>

@@ -34,9 +34,6 @@ export interface SuburbRealData {
 }
 export declare class ExternalDataService {
     private static weightedAverage;
-    private static getSA2Record;
-    private static aggregateMultiSA2Metrics;
-    static getAbsRecord(suburbName: string, state: string): any;
     static getAbsMetrics(suburbName: string, state: string, sa2Mapping?: SA2Boundary | null): Promise<{
         population?: number;
         medianAge?: number;
@@ -45,7 +42,7 @@ export declare class ExternalDataService {
         medianIncome?: number;
     }>;
     static getSchoolCount(suburbName: string, state: string): Promise<number | null>;
-    static getCommuteTime(origin: string, destination?: string): Promise<number | null>;
+    static getCommuteTime(suburbName: string, state: string): Promise<number | null>;
     static getPublicTransportStops(suburbName: string, state: string): Promise<number | null>;
     static getParksCount(suburbName: string, state: string): Promise<number | null>;
     static getSuburbRealData(suburbName: string, state: string, postcode: string): Promise<SuburbRealData>;

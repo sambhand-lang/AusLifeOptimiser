@@ -1,95 +1,52 @@
+﻿import { useState, useEffect } from 'react';
+import { getSuburbsForComparison } from '@/lib/suburbs';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { MapPin, Car, Users, Info, TreePine, Home, TrendingUp, Wallet, Percent } from 'lucide-react';
+import { TooltipProvider } from '@/components/ui/tooltip';
+import { SearchableSuburbSelector } from './SearchableSuburbSelector';
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MapPin, ArrowRight, ExternalLink, Users, Car, TreePine, Home, TrendingUp, Wallet, Percent, Info } from 'lucide-react';
-import { SearchableSuburbSelector } from './SearchableSuburbSelector';
-import { useSearchParams, Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { TooltipProvider } from '@/components/ui/tooltip';
+// Type definitions
 
-export type SuburbComparison2Props = {
-  initialSuburb1?: string;
-  initialSuburb2?: string;
-  initialSuburb3?: string;
-  suburbs?: unknown;
+type SuburbData = {
+  id?: number;
+  suburb_name: string;
+  postcode: string;
+  state: string;
+  city?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  realTimeData?: {
+    population?: Metric | null;
+    medianAge?: Metric | null;
+    householdSize?: Metric | null;
+  } | null;
 };
 
-export function SuburbComparison2({
-  initialSuburb1 = '',
-  initialSuburb2 = '',
-  initialSuburb3 = '',
-}: SuburbComparison2Props) {
-  const [params, setParams] = useSearchParams();
-  
-  const suburb1 = params.get('sub1') || initialSuburb1;
-  const suburb2 = params.get('sub2') || initialSuburb2;
-  const suburb3 = params.get('sub3') || initialSuburb3;
+interface Props {
+  suburbId: string;
+}
 
-  const setSuburb1 = (val: string) => setParams(prev => { const p = new URLSearchParams(prev); if (val) p.set('sub1', val); else p.delete('sub1'); return p; }, {replace: true});
-  const setSuburb2 = (val: string) => setParams(prev => { const p = new URLSearchParams(prev); if (val) p.set('sub2', val); else p.delete('sub2'); return p; }, {replace: true});
-  const setSuburb3 = (val: string) => setParams(prev => { const p = new URLSearchParams(prev); if (val) p.set('sub3', val); else p.delete('sub3'); return p; }, {replace: true});
+export default function SuburbComparison2({ suburbId }: Props) {
+  // Use suburbId directly without next/navigation
+  return (
+    <div>
+      <h2>Comparing Suburb: {suburbId}</h2>
+      {/* Other component logic */}
+    </div>
+  );
+}
 
-  const hasSelection = !!(suburb1 || suburb2 || suburb3);
+// ...existing code...
 
-  const [s1, setS1] = useState<any | null>(null);
-  const [s2, setS2] = useState<any | null>(null);
-  const [s3, setS3] = useState<any | null>(null);
 
-  const fetchSuburb = (name: string, setState: (data: any | null) => void) => {
-    if (!name) {
-      setState(null);
-      return;
+// Type definitions
+        <div>
+          <h2>Comparing Suburb: {suburbId}</h2>
+          {/* Other component logic */}
+        </div>
+      );
     }
-    const parts = name.split('|');
-    const suburbanName = parts[0]?.trim() || '';
-    const postcode = parts[1]?.trim() || null;
-
-    fetch(`/api/dropdowns/search?q=${encodeURIComponent(suburbanName)}`)
-      .then(res => res.ok ? res.json() : Promise.reject())
-      .then(data => {
-        const results = data.results || (Array.isArray(data) ? data : []);
-        if (results.length > 0) {
-          const chosen = postcode
-            ? results.find((s: any) => String(s.postcode) === String(postcode)) || results[0]
-            : results[0];
-          return fetch(`/api/suburbs/${chosen.ssc || chosen.id}/details`);
-        }
-        return Promise.reject();
-      })
-      .then(res => res.json())
-      .then(data => setState(data))
-      .catch(() => setState(null));
-  };
-
-  useEffect(() => { fetchSuburb(suburb1, setS1); }, [suburb1]);
-  useEffect(() => { fetchSuburb(suburb2, setS2); }, [suburb2]);
-  useEffect(() => { fetchSuburb(suburb3, setS3); }, [suburb3]);
-
-  const formatMetric = (metric?: any | null, metricType?: string) => {
-    if (metric == null) return { display: 'Data not available', meta: null, badge: null };
-
-    let value: number;
-    let meta: string | null = null;
-    let badge: string | null = null;
-
-    if (typeof metric === 'number') {
-      value = metric;
-    } else if (typeof metric === 'object' && metric.value != null) {
-      value = metric.value;
-      meta = metric.source ? `${metric.source}${metric.datasetYear ? ` (${metric.datasetYear})` : ''}` : null;
-      const isOfficial = metric.source?.includes('ABS Census');
-      badge = isOfficial ? 'official' : metric.source?.includes('Estimate') || !metric.source ? 'estimate' : 'derived';
-    } else {
-      return { display: 'Data not available', meta: null, badge: null };
-    }
-
-    let display: string;
-    if (metricType === 'employmentRate') {
-      const percentValue = value < 1 ? value * 100 : value;
-      display = `${percentValue.toFixed(1)}%`;
-    } else if (metricType === 'housePrice' || metricType === 'rent' || metricType === 'medianIncome') {
-      display = `$${Math.round(value).toLocaleString()}`;
     } else if (metricType === 'growth' || metricType === 'yield') {
       display = `${value.toFixed(1)}%`;
     } else if (value % 1 === 0) {
@@ -110,55 +67,51 @@ export function SuburbComparison2({
     );
   };
 
-  const getPopulationMetric = (s: any | null) => s?.realTimeData?.population ?? s?.population ?? null;
-  const getMedianAgeMetric = (s: any | null) => s?.realTimeData?.medianAge ?? s?.median_age ?? null;
-  const getHouseholdSizeMetric = (s: any | null) => s?.realTimeData?.householdSize ?? s?.hh_size ?? null;
-  const getMedianIncomeMetric = (s: any | null) => s?.realTimeData?.medianIncome ?? s?.median_income ?? null;
-  const getCommuteMetric = (s: any | null) => s?.realTimeData?.commute?.drivingTimeMinutes ?? s?.commute_time ?? null;
-  const getSchoolCountMetric = (s: any | null) => s?.realTimeData?.schools?.count ?? s?.school_count ?? null;
-  const getParksMetric = (s: any | null) => s?.realTimeData?.parks ?? s?.parks_count ?? null;
+  const getPopulationMetric = (s: SuburbData | null) => s?.realTimeData?.population ?? s?.population ?? null;
+  const getMedianAgeMetric = (s: SuburbData | null) => s?.realTimeData?.medianAge ?? s?.median_age ?? null;
+  const getHouseholdSizeMetric = (s: SuburbData | null) => s?.realTimeData?.householdSize ?? s?.hh_size ?? null;
+  const getMedianIncomeMetric = (s: SuburbData | null) => s?.realTimeData?.medianIncome ?? s?.median_income ?? null;
+  const getCommuteMetric = (s: SuburbData | null) => s?.realTimeData?.commute?.drivingTimeMinutes ?? s?.commute_time ?? null;
+  const getSchoolCountMetric = (s: SuburbData | null) => s?.realTimeData?.schools?.count ?? s?.school_count ?? null;
+  const getParksMetric = (s: SuburbData | null) => s?.realTimeData?.parks ?? s?.parks_count ?? null;
 
   // Real Estate Metrics from Database
-  const getMedianHousePriceMetric = (s: any | null) => s?.median_house_price ?? null;
-  const getOneYearGrowthMetric = (s: any | null) => s?.one_year_growth ?? null;
-  const getMedianRentMetric = (s: any | null) => s?.median_rent ?? null;
-  const getRentalYieldMetric = (s: any | null) => s?.rental_yield ?? null;
+  const getMedianHousePriceMetric = (s: SuburbData | null) => s?.median_house_price ?? null;
+  const getOneYearGrowthMetric = (s: SuburbData | null) => s?.one_year_growth ?? null;
+  const getMedianRentMetric = (s: SuburbData | null) => s?.median_rent ?? null;
+  const getRentalYieldMetric = (s: SuburbData | null) => s?.rental_yield ?? null;
 
   return (
     <TooltipProvider>
-      <div className="space-y-6 bg-gradient-to-b from-emerald-50 to-white p-6 rounded-xl">
+      <div className="space-y-6 bg-gradient-to-b from-emerald-50 to-white p-6">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 rounded-xl p-8 text-white shadow-lg">
+          <div className="flex items-center gap-3 mb-2">
+            <MapPin className="h-6 w-6" />
+            <h1 className="text-3xl font-bold">Suburb Comparison</h1>
+          </div>
+          <p className="text-emerald-100">Compare Australian suburbs with verified data</p>
+        </div>
+
+        {/* Selection */}
         <Card className="border-emerald-200">
           <CardHeader className="bg-emerald-50 border-b-2 border-emerald-200">
-            <CardTitle>Suburb Comparison</CardTitle>
-            <CardDescription>
-              Select 2-3 suburbs to compare key metrics side by side.
-            </CardDescription>
+            <CardTitle>Select Suburbs to Compare</CardTitle>
+            <CardDescription>Choose 2-3 suburbs to view side-by-side metrics</CardDescription>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <SearchableSuburbSelector
-                label="Suburb 1"
-                selectedSuburb={suburb1}
-                onSuburbChange={setSuburb1}
-              />
-              <SearchableSuburbSelector
-                label="Suburb 2"
-                selectedSuburb={suburb2}
-                onSuburbChange={setSuburb2}
-              />
-              <SearchableSuburbSelector
-                label="Suburb 3 (optional)"
-                selectedSuburb={suburb3}
-                onSuburbChange={setSuburb3}
-              />
+              <SearchableSuburbSelector label="Suburb 1" selectedSuburb={suburb1} onSuburbChange={(val) => { setSuburb1(val); onSuburbChange1?.(val); }} />
+              <SearchableSuburbSelector label="Suburb 2" selectedSuburb={suburb2} onSuburbChange={(val) => { setSuburb2(val); onSuburbChange2?.(val); }} />
+              <SearchableSuburbSelector label="Suburb 3 (Optional)" selectedSuburb={suburb3} onSuburbChange={(val) => { setSuburb3(val); onSuburbChange3?.(val); }} />
             </div>
           </CardContent>
         </Card>
 
-        {!hasSelection && (
+        {!suburb1 && !suburb2 && !suburb3 && (
           <div className="text-center py-12 text-gray-500">
             <MapPin className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p className="text-lg">Select suburbs above to begin comparison.</p>
+            <p className="text-lg">Select suburbs to begin comparison</p>
           </div>
         )}
 
@@ -170,94 +123,19 @@ export function SuburbComparison2({
         )}
 
         {s1 && s2 && (
-          <>
-            <Card className="border-dashed border-emerald-300 bg-emerald-50/50">
-              <CardHeader>
-                <CardTitle>Quick Insights</CardTitle>
-                <CardDescription>
-                  Select 'View Full Report' for detailed demographic, lifestyle and borrowing information.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-sm font-semibold text-emerald-800">
-                  Selected Suburbs:
-                </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[suburb1, suburb2, suburb3].filter(Boolean).map((sub, i) => {
-                    const parts = sub.split('|');
-                    const name = parts[0]?.trim() || '';
-                    const post = parts[1]?.trim() || '';
-                    const state = parts[2]?.trim() || 'NSW'; // Fallback
-                    return (
-                      <div key={i} className="bg-white rounded-2xl shadow-sm border border-emerald-100 p-6 flex flex-col items-center text-center transition-all hover:shadow-md">
-                        <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center mb-4">
-                            <MapPin className="h-6 w-6 text-emerald-600" />
-                        </div>
-                        <Link to={`/suburbs/${state.toLowerCase()}/${name.toLowerCase()}`} className="font-extrabold text-xl text-slate-800 mb-1 hover:text-emerald-600 transition-colors flex items-center justify-center gap-1 group/name">
-                          {name} <ExternalLink className="h-4 w-4 opacity-50 group-hover/name:opacity-100 transition-opacity" />
-                        </Link>
-                        <div className="text-sm font-medium text-slate-500 mb-6">{post} • {state}</div>
-                        <Link to={`/suburbs/${state.toLowerCase()}/${name.toLowerCase()}`} className="mt-auto w-full">
-                          <Button variant="outline" className="w-full border-emerald-300 text-emerald-700 hover:bg-emerald-50 font-semibold shadow-sm transition-all group">
-                            View Full Report 
-                            <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
-                          </Button>
-                        </Link>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* Comparison Table */}
-            <Card className="border-emerald-200 shadow-lg">
-              <CardHeader className="bg-gradient-to-r from-emerald-50 to-amber-50 border-b-2 border-emerald-200">
-                <CardTitle className="text-emerald-900">Detailed Comparison</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead>
-                      <tr className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white">
-                        <th className="px-6 py-4 text-left font-bold">Metric</th>
-                        <th className="px-6 py-4 text-center font-bold text-emerald-50">
-                          <div className="font-bold flex items-center justify-center gap-1">
-                              <Link
-                                to={`/suburbs/${s1.state?.toLowerCase() || 'nsw'}/${encodeURIComponent(s1.suburb_name.toLowerCase())}`}
-                                className="hover:underline text-white flex items-center gap-1"
-                                title="View suburb profile"
-                              >
-                                {s1.suburb_name}
-                                <ExternalLink className="h-4 w-4 ml-1 opacity-70" />
-                              </Link>
-                            </div>
-                          <div className="text-xs text-emerald-100">{s1.postcode}, {s1.state}</div>
-                        </th>
-                        <th className="px-6 py-4 text-center font-bold text-emerald-50">
-                          <div className="font-bold flex items-center justify-center gap-1">
-                              <Link
-                                to={`/suburbs/${s2.state?.toLowerCase() || 'nsw'}/${encodeURIComponent(s2.suburb_name.toLowerCase())}`}
-                                className="hover:underline text-white flex items-center gap-1"
-                                title="View suburb profile"
-                              >
-                                {s2.suburb_name}
-                                <ExternalLink className="h-4 w-4 ml-1 opacity-70" />
-                              </Link>
-                            </div>
                           <div className="text-xs text-emerald-100">{s2.postcode}, {s2.state}</div>
                         </th>
                         {s3 && (
                           <th className="px-6 py-4 text-center font-bold text-emerald-50">
-                            <div className="font-bold flex items-center justify-center gap-1">
-                              <Link
-                                to={`/suburbs/${s3.state?.toLowerCase() || 'nsw'}/${encodeURIComponent(s3.suburb_name.toLowerCase())}`}
-                                className="hover:underline text-white flex items-center gap-1"
+                            <div className="font-bold flex items-center gap-1">
+                              <a
+                                href={`/suburbs/${encodeURIComponent(s3.suburb_name.replace(/\s+/g, '-').toLowerCase())}`}
+                                className="hover:underline text-emerald-700 flex items-center gap-1"
                                 title="View suburb profile"
                               >
                                 {s3.suburb_name}
-                                <ExternalLink className="h-4 w-4 ml-1 opacity-70" />
-                              </Link>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1 text-emerald-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.828 10.172a4 4 0 015.656 5.656l-5.657 5.657a4 4 0 01-5.656-5.657m5.657-5.656L15 5m0 0V3m0 2h2" /></svg>
+                              </a>
                             </div>
                             <div className="text-xs text-emerald-100">{s3.postcode}, {s3.state}</div>
                           </th>
@@ -330,9 +208,9 @@ export function SuburbComparison2({
                           const c = s3 ? getMedianIncomeMetric(s3) : null;
                           return (
                             <>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'medianIncome')}</td>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'medianIncome')}</td>
-                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'medianIncome')}</td>}
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b)}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c)}</td>}
                             </>
                           );
                         })()}
@@ -478,11 +356,11 @@ export function SuburbComparison2({
                   <div className="mt-2 space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-4 h-4 rounded border border-green-300 bg-green-100"></span>
-                      <span><strong>✔ Census:</strong> ABS Census 2021 official data (population, median age, household size, weekly income)</span>
+                      <span><strong>Γ£ô Census:</strong> ABS Census 2021 official data (population, median age, household size, weekly income)</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="inline-block w-4 h-4 rounded border border-amber-300 bg-amber-100"></span>
-                      <span><strong>⚠ Estimates:</strong> Real estate data and calculated suburb metrics</span>
+                      <span><strong>ΓÜá Estimates:</strong> Real estate data and calculated suburb metrics</span>
                     </div>
                   </div>
                   <p className="mt-2 text-xs text-gray-600 italic">Metrics: Population, Age, Household Size, Income, Commute, Schools, Parks, House Price, Growth, Rent, Yield</p>
@@ -495,5 +373,3 @@ export function SuburbComparison2({
     </TooltipProvider>
   );
 }
-
-export default SuburbComparison2;

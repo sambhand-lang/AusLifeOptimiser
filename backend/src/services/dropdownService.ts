@@ -70,6 +70,9 @@ export interface DropdownItem {
   rental_yield: number;
   all_postcodes: string[];
   ssc: string;
+  overall_score?: number;
+  rank?: number;
+  total_suburbs?: number;
   searchText?: string;
 }
 
@@ -246,7 +249,10 @@ export function getSuburbWithPostcodes(ssc: string): Promise<DropdownItem & { di
           School_Count AS school_count,
           Commute_Time_Mins AS commute_time,
           Parks_Count AS parks_count,
-          Rental_Yield_Pct AS rental_yield
+          Rental_Yield_Pct AS rental_yield,
+          Overall_Score AS overall_score,
+          Rank AS rank,
+          (SELECT COUNT(*) FROM suburbs WHERE Overall_Score IS NOT NULL) AS total_suburbs
         FROM suburbs
         WHERE SAL_ID = ? LIMIT 1
       `, [ssc], (err, row: any) => {
@@ -274,9 +280,96 @@ export function getSuburbWithPostcodes(ssc: string): Promise<DropdownItem & { di
           rental_yield: row.rental_yield ?? 0,
           sal_code_2021: row.sal_code_2021 ?? '',
           all_postcodes: [row.postcode].filter(Boolean),
+          overall_score: row.overall_score ?? 0,
+          rank: row.rank ?? 0,
+          total_suburbs: row.total_suburbs ?? 0,
           ssc: row.ssc,
           display: `${row.suburb_name}, ${row.state} ${row.postcode}`,
           searchText: `${row.suburb_name} ${row.state} ${row.postcode}`.toLowerCase(),
+        });
+      });
+    });
+  });
+}
+
+export function getNearbySuburbs(id: string, postcode: string, state: string): Promise<DropdownItem[]> {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath, (err) => {
+      if (err) return reject(err);
+
+      // 1. Get current suburb's coordinates
+      db.get(`SELECT latitude, longitude FROM suburbs WHERE SAL_ID = ?`, [id], (err, current: any) => {
+        if (err || !current || current.latitude == null) {
+          // Fallback to postcode/state logic if no coordinates
+          db.all(`
+            SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, Overall_Score AS overall_score
+            FROM suburbs
+            WHERE (Postcode = ? OR State = ?) AND SAL_ID != ?
+            ORDER BY Overall_Score DESC LIMIT 4
+          `, [postcode, state, id], (err, rows: any[]) => {
+            db.close();
+            if (err) return reject(err);
+            resolve((rows || []).map(r => ({
+              id: r.ssc,
+              label: `${r.suburb_name}, ${r.state} ${r.postcode}`,
+              suburb_name: r.suburb_name,
+              state: r.state,
+              postcode: r.postcode,
+              overall_score: r.overall_score,
+              ssc: r.ssc
+            } as any)));
+          });
+          return;
+        }
+
+        const { latitude: lat1, longitude: lon1 } = current;
+        // ~0.2 degrees is roughly 22km
+        const delta = 0.2; 
+
+        // 2. Fetch candidates in bounding box
+        db.all(`
+          SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, 
+                 Overall_Score AS overall_score, latitude, longitude
+          FROM suburbs
+          WHERE latitude BETWEEN ? AND ?
+            AND longitude BETWEEN ? AND ?
+            AND SAL_ID != ?
+          LIMIT 50
+        `, [lat1 - delta, lat1 + delta, lon1 - delta, lon1 + delta, id], (err, rows: any[]) => {
+          db.close();
+          if (err) return reject(err);
+
+          // 3. Haversine distance calculation in JS
+          const calculateDistance = (la1: number, lo1: number, la2: number, lo2: number) => {
+            const R = 6371; // km
+            const dLat = (la2 - la1) * Math.PI / 180;
+            const dLon = (lo2 - lo1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+          };
+
+          const nearby = (rows || [])
+            .map(r => ({
+              ...r,
+              distance: calculateDistance(lat1, lon1, r.latitude, r.longitude)
+            }))
+            .sort((a, b) => a.distance - b.distance)
+            .slice(0, 4)
+            .map(r => ({
+              id: r.ssc,
+              label: `${r.suburb_name}, ${r.state} ${r.postcode}`,
+              suburb_name: r.suburb_name,
+              state: r.state,
+              postcode: r.postcode,
+              overall_score: r.overall_score,
+              distance: Math.round(r.distance * 10) / 10,
+              ssc: r.ssc
+            } as any));
+
+          resolve(nearby);
         });
       });
     });

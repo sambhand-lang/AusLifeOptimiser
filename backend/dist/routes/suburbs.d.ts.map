@@ -1,1 +1,1 @@
-{"version":3,"file":"suburbs.d.ts","sourceRoot":"","sources":["../../src/routes/suburbs.ts"],"names":[],"mappings":"AAAA,OAAgB,EAAqB,MAAM,EAAE,MAAM,SAAS,CAAC;AAI7D,QAAA,MAAM,MAAM,EAAE,MAAyB,CAAC;AAiSxC,eAAe,MAAM,CAAC"}
+{"version":3,"file":"suburbs.d.ts","sourceRoot":"","sources":["../../src/routes/suburbs.ts"],"names":[],"mappings":"AAIA,QAAA,MAAM,MAAM,4CAAW,CAAC;AAyCxB,eAAe,MAAM,CAAC"}
