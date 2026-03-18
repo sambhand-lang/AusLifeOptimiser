@@ -49,7 +49,17 @@ async function run() {
     const effectivePop = Math.max(800, rawPop); // Slightly higher floor for more stability
     
     // 1. Affordability (15%) - Weight reduced to favor quality
-    const affordability = row.Median_House_Price ? normalizeInverse(row.Median_House_Price, benchmarks.priceMin, benchmarks.priceMax) : 0;
+    let affordability = 0;
+    if (row.Median_House_Price && row.Median_Income_Weekly) {
+      const annualIncome = row.Median_Income_Weekly * 52;
+      const ratio = annualIncome / row.Median_House_Price;
+      const ratioMin = 0.02; // e.g. 50x income (extremely unaffordable)
+      const ratioMax = 0.20; // e.g. 5x income (very affordable)
+      affordability = ((ratio - ratioMin) / (ratioMax - ratioMin)) * 100;
+      affordability = Math.max(0, Math.min(100, affordability));
+    } else if (row.Median_House_Price) {
+      affordability = normalizeInverse(row.Median_House_Price, benchmarks.priceMin, benchmarks.priceMax);
+    }
     
     // 2. Economy & Wealth (20%)
     const economy = row.Median_Income_Weekly ? normalizeDirect(row.Median_Income_Weekly, benchmarks.incomeMin, benchmarks.incomeMax) : 0;
@@ -94,9 +104,18 @@ async function run() {
       affordability * 0.15
     );
     
+    const scoreBreakdown = {
+      affordability: Math.round(affordability),
+      employment: Math.round(economy),
+      commute: Math.round(connectivity),
+      schools: Math.round(family),
+      lifestyle: Math.round(lifestyleFinal)
+    };
+
     return { 
       SAL_ID: row.SAL_ID, 
       overallScore,
+      scoreBreakdown: JSON.stringify(scoreBreakdown),
       Population: rawPop
     };
   });
@@ -108,9 +127,9 @@ async function run() {
   
   db.serialize(() => {
     db.run("BEGIN TRANSACTION");
-    const stmt = db.prepare("UPDATE suburbs SET Overall_Score = ?, Rank = ? WHERE SAL_ID = ?");
+    const stmt = db.prepare("UPDATE suburbs SET Overall_Score = ?, Rank = ?, Score_Breakdown = ? WHERE SAL_ID = ?");
     scored.forEach((s, index) => {
-      stmt.run(s.overallScore, index + 1, s.SAL_ID);
+      stmt.run(s.overallScore, index + 1, s.scoreBreakdown, s.SAL_ID);
     });
     stmt.finalize();
     db.run("COMMIT", (err) => {

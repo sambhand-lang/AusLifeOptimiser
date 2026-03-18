@@ -47,7 +47,7 @@ export function calculateSuburbScore(
   suburb: SuburbData,
   benchmarks: SuburbScoreBenchmarks
 ): SuburbData {
-  const income = getMetricValue(suburb.realTimeData?.medianIncome);
+  const income = getMetricValue(suburb.realTimeData?.medianIncome) || ((suburb as any).median_income) || ((suburb as any).median_income_weekly);
   const housePrice = getMetricValue(suburb.realTimeData?.medianHousePrice) || ((suburb as any).median_house_price);
   const commute = getMetricValue(suburb.realTimeData?.commute?.drivingTimeMinutes);
   const schools = getMetricValue(suburb.realTimeData?.schools?.count);
@@ -55,9 +55,17 @@ export function calculateSuburbScore(
   const effectivePop = Math.max(800, population);
 
   // 1. Affordability (15%)
-  const affordability = housePrice != null
-    ? normalizeInverse(housePrice, benchmarks.priceMin, benchmarks.priceMax)
-    : 0;
+  let affordability = 0;
+  if (housePrice != null && income != null && housePrice > 0) {
+    const annualIncome = income * 52;
+    const ratio = annualIncome / housePrice;
+    const ratioMin = 0.02;
+    const ratioMax = 0.20;
+    affordability = ((ratio - ratioMin) / (ratioMax - ratioMin)) * 100;
+    affordability = Math.max(0, Math.min(100, affordability));
+  } else if (housePrice != null) {
+    affordability = normalizeInverse(housePrice, benchmarks.priceMin, benchmarks.priceMax);
+  }
   
   // 2. Economy (20%)
   const employmentScore = income != null
@@ -82,15 +90,13 @@ export function calculateSuburbScore(
   const cafes = getMetricValue((suburb.realTimeData as any)?.cafes) || 0;
   const restaurants = getMetricValue((suburb.realTimeData as any)?.restaurants) || 0;
   const recreation = getMetricValue((suburb.realTimeData as any)?.recreation) || 0;
-  const transitScore = getMetricValue((suburb.realTimeData as any)?.transitScore) || 50;
-
   const cafeCount = cafes + restaurants;
   const cafeDensity = (cafeCount / effectivePop) * 1000;
   const amenityDensityScore = Math.min(100, cafeDensity * 12.5);
   const absoluteBonus = Math.min(20, (cafeCount / 40) * 20);
   
   const recScore = Math.min(100, (recreation / effectivePop) * 5000);
-  let lifestyleBase = (amenityDensityScore * 0.6) + (recScore * 0.3) + (transitScore * 0.1) + absoluteBonus;
+  let lifestyleBase = (amenityDensityScore * 0.7) + (recScore * 0.3) + absoluteBonus;
   lifestyleBase = Math.min(100, lifestyleBase);
 
   // Small suburb dampener

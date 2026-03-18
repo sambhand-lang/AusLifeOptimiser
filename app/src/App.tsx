@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation, Link } from 'react-router-dom';
 import { SuburbDetail } from '@/pages/SuburbDetail';
 import { SuburbRankings } from '@/pages/SuburbRankings';
+import { CostOfLivingPage } from '@/pages/CostOfLivingPage';
+import { AboutPage } from '@/pages/AboutPage';
 import {
   Calculator,
   Home,
@@ -22,10 +24,12 @@ import {
   ArrowRight,
   CheckCircle2,
   Globe,
-  FileSearch
+  FileSearch,
+  Wallet
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
+import { CostOfLivingTable } from '@/components/calculators/CostOfLivingTable';
 import { Badge } from '@/components/ui/badge';
 import { HomeLoanCalculator } from '@/components/calculators/HomeLoanCalculator';
 import { StampDutyCalculator } from '@/components/calculators/StampDutyCalculator';
@@ -33,11 +37,12 @@ import { BorrowingPowerCalculator } from '@/components/calculators/BorrowingPowe
 import { SavingsCalculator } from '@/components/calculators/SavingsCalculator';
 import { TaxCalculator } from '@/components/calculators/TaxCalculator';
 import { SuburbComparison2 } from '@/components/calculators/SuburbComparison2';
+import { RentAffordabilityCalculator } from '@/components/calculators/RentAffordabilityCalculator';
 import './App.css';
 import { SuburbScoreCard } from '@/components/suburbs/SuburbScoreCard';
 import { HeroSearch } from '@/components/suburbs/HeroSearch';
 
-type CalculatorType = 'home' | 'stampduty' | 'borrowing' | 'savings' | 'tax' | 'suburb';
+type CalculatorType = 'home' | 'stampduty' | 'borrowing' | 'savings' | 'tax' | 'suburb' | 'costliving' | 'rentaffordability';
 
 interface CalculatorInfo {
   id: CalculatorType;
@@ -102,6 +107,24 @@ const calculators: CalculatorInfo[] = [
     color: 'from-cyan-500 to-blue-600',
     badge: 'New',
   },
+  {
+    id: 'costliving',
+    name: 'Cost of Living Comparison',
+    shortName: 'Cost of Living',
+    description: 'Compare key cost of living items between 8 major Australian cities',
+    icon: <MapPin className="h-6 w-6" />,
+    color: 'from-amber-500 to-emerald-600',
+    badge: 'Popular',
+  },
+  {
+    id: 'rentaffordability',
+    name: 'Rent Affordability',
+    shortName: 'Rent Calculator',
+    description: 'Find out how much rent you can afford based on your income',
+    icon: <Wallet className="h-6 w-6" />,
+    color: 'from-emerald-400 to-teal-500',
+    badge: 'New',
+  },
 ];
 
 const features = [
@@ -155,8 +178,22 @@ function InnerApp() {
       setScrolled(window.scrollY > 50);
     };
     window.addEventListener('scroll', handleScroll);
+
+    // Scroll logic
+    if (!location.hash) {
+      window.scrollTo(0, 0);
+    } else {
+      setTimeout(() => {
+        const id = location.hash.replace('#', '');
+        const element = document.getElementById(id);
+        if (element) {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 100);
+    }
+
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  }, [location]);
 
   const renderCalculator = () => {
     switch (activeCalculator) {
@@ -172,6 +209,10 @@ function InnerApp() {
         return <TaxCalculator />;
       case 'suburb':
         return <SuburbComparison2 />;
+      case 'costliving':
+        return <CostOfLivingTable />;
+      case 'rentaffordability':
+        return <RentAffordabilityCalculator />;
       default:
         return null;
     }
@@ -302,6 +343,14 @@ function InnerApp() {
                       </Link>
                     </li>
                     <li>
+                      <Link
+                        to="/cost-of-living"
+                        className="block w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
+                      >
+                        Cost of Living
+                      </Link>
+                    </li>
+                    <li>
                       <button
                         className="w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
                         onClick={() => setActiveCalculator('suburb')}
@@ -310,12 +359,12 @@ function InnerApp() {
                       </button>
                     </li>
                     <li>
-                      <button
-                        className="w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
-                        onClick={() => window.open('/SCORING_V1.md', '_blank')}
+                      <Link
+                        to="/about#accuracy"
+                        className="block w-full text-left px-4 py-3.5 text-sm font-medium text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 transition-colors duration-150"
                       >
                         Ranking Methodology
-                      </button>
+                      </Link>
                     </li>
                   </ul>
                 </div>
@@ -332,14 +381,16 @@ function InnerApp() {
               <span className="font-medium">Savings</span>
             </Button>
             
-            <Button
-              variant="ghost"
-              size="sm"
-              className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} transition-all`}
-            >
-              <ExternalLink className="h-4 w-4" />
-              <span className="font-medium">Resources</span>
-            </Button>
+            <Link to="/about">
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`gap-2 rounded-full px-4 hover:bg-slate-100 ${scrolled ? 'text-slate-800' : 'text-amber-300'} transition-all`}
+              >
+                <Users className="h-4 w-4" />
+                <span className="font-medium">About</span>
+              </Button>
+            </Link>
           </nav>
 
           <div className="hidden lg:flex items-center gap-3">
@@ -405,6 +456,8 @@ function InnerApp() {
         <Routes>
           <Route path="/suburbs/rankings" element={<SuburbRankings />} />
           <Route path="/suburbs/:state/:name" element={<SuburbDetail />} />
+          <Route path="/cost-of-living" element={<CostOfLivingPage />} />
+          <Route path="/about" element={<AboutPage />} />
           <Route path="*" element={
             <>
         {activeCalculator ? (
@@ -908,8 +961,9 @@ function InnerApp() {
               <ul className="space-y-3">
                 <li><Link to="/suburbs/rankings" className="text-slate-400 hover:text-emerald-400 transition-colors">Suburb Rankings</Link></li>
                 <li><button onClick={() => setActiveCalculator('suburb')} className="text-slate-400 hover:text-emerald-400 transition-colors">Compare Suburbs</button></li>
-                <li><button onClick={() => window.open('/SCORING_V1.md', '_blank')} className="text-slate-400 hover:text-emerald-400 transition-colors">Ranking Methodology</button></li>
-                <li><a href="/legal/property-market.html" className="text-slate-400 hover:text-emerald-400 transition-colors">Market Reports</a></li>
+                <li><Link to="/about#accuracy" className="text-slate-400 hover:text-emerald-400 transition-colors">Ranking Methodology</Link></li>
+                <li><Link to="/cost-of-living#calculator" className="text-slate-400 hover:text-emerald-400 transition-colors">Cost of Living</Link></li>
+                <li><Link to="/about#data-sources" className="text-slate-400 hover:text-emerald-400 transition-colors">Market Reports</Link></li>
               </ul>
             </div>
 

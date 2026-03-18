@@ -21,7 +21,7 @@ async function run() {
   };
 
   const suburbs = await new Promise((resolve, reject) => {
-    db.all(`SELECT SAL_ID, Suburb_Name, State, Median_House_Price, One_Year_Growth_Pct FROM suburbs`, (err, rows) => {
+    db.all(`SELECT SAL_ID, Suburb_Name, State, Postcode, Median_House_Price, One_Year_Growth_Pct FROM suburbs`, (err, rows) => {
       if (err) reject(err); else resolve(rows);
     });
   });
@@ -39,13 +39,41 @@ async function run() {
       // Calculate new median based on state performance
       let newMedian = Math.round(s.Median_House_Price * factor);
       
+      // APPLY METRO FLOORS (2025 REALISM)
+      // Many synthetic values are in the $400k-$700k range for Sydney/Melbourne, which is impossible.
+      const pc = parseInt(s.Postcode);
+      if (state === 'NSW' && pc >= 2000 && pc <= 2234) {
+          if (newMedian < 1200000) newMedian = 1250000 + (Math.random() * 200000); // Sydney Floor
+      }
+      if (state === 'VIC' && pc >= 3000 && pc <= 3207) {
+          if (newMedian < 800000) newMedian = 850000 + (Math.random() * 150000); // Melbourne Floor
+      }
+      if (state === 'QLD' && pc >= 4000 && pc <= 4179) {
+          if (newMedian < 750000) newMedian = 800000 + (Math.random() * 120000); // Brisbane Floor
+      }
+
+      // Coastal & Regional Hubs
+      if (state === 'NSW') {
+        if (pc >= 2481 && pc <= 2483 && newMedian < 1400000) newMedian = 1500000 + (Math.random() * 400000); // Byron Shire
+        if (pc >= 2250 && pc <= 2263 && newMedian < 800000) newMedian = 850000 + (Math.random() * 100000); // Central Coast
+        if (pc >= 2500 && pc <= 2530 && newMedian < 850000) newMedian = 900000 + (Math.random() * 150000); // Wollongong/Illawarra
+        if (pc >= 2264 && pc <= 2308 && newMedian < 800000) newMedian = 850000 + (Math.random() * 150000); // Newcastle
+      }
+      
+      if (state === 'QLD') {
+        if (pc >= 4210 && pc <= 4230 && newMedian < 900000) newMedian = 950000 + (Math.random() * 200000); // Gold Coast
+        if (pc >= 4550 && pc <= 4575 && newMedian < 850000) newMedian = 900000 + (Math.random() * 150000); // Sunshine Coast
+      }
+      
+      if (state === 'VIC') {
+        if (pc >= 3220 && pc <= 3233 && newMedian < 800000) newMedian = 850000 + (Math.random() * 150000); // Surf Coast / Geelong
+        if (pc >= 3926 && pc <= 3944 && newMedian < 1000000) newMedian = 1100000 + (Math.random() * 300000); // Mornington Peninsula
+      }
+
       // Cap at realistic 2025 levels for high end
-      // Top suburbs in Sydney/Melbourne now hit $4M - $10M
-      // Our database was strictly capped at $2.5M
       if (newMedian > 2500000) {
-          // Allow some to exceed the previous cap if they are in NSW/VIC/WA
           if (state === 'NSW' || state === 'VIC' || state === 'WA') {
-              newMedian = Math.min(6500000, newMedian + (Math.random() * 500000));
+              newMedian = Math.min(12000000, newMedian + (Math.random() * 1000000));
           }
       }
 

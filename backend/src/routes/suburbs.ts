@@ -1,8 +1,25 @@
 import { Router } from 'express';
 import { ExternalDataService } from '../externalDataService';
-import { getSuburbWithPostcodes, searchSuburbs, getNearbySuburbs } from '../services/dropdownService';
+import { getSuburbWithPostcodes, searchSuburbs, getNearbySuburbs, getTopRankings } from '../services/dropdownService';
 
 const router = Router();
+
+/**
+ * GET /api/suburbs/rankings
+ * Returns top-ranked suburbs
+ */
+router.get('/rankings', async (req, res) => {
+  const limit = parseInt(req.query.limit as string) || 20;
+  const state = req.query.state as string;
+
+  try {
+    const results = await getTopRankings(limit, state);
+    res.json({ data: results });
+  } catch (err: any) {
+    console.error('Error in suburb rankings route:', err);
+    res.status(500).json({ message: 'Internal server error', error: err.message });
+  }
+});
 
 /**
  * GET /api/suburbs/search
@@ -20,6 +37,7 @@ router.get('/search', async (req, res) => {
     res.status(500).json({ message: 'Internal server error', error: err.message });
   }
 });
+
 
 /**
  * GET /api/suburbs/:id/details

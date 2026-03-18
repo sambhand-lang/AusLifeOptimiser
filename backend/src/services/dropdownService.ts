@@ -375,3 +375,50 @@ export function getNearbySuburbs(id: string, postcode: string, state: string): P
     });
   });
 }
+
+/**
+ * Get top ranked suburbs
+ */
+export function getTopRankings(limit: number = 10, state?: string): Promise<DropdownItem[]> {
+  return new Promise((resolve, reject) => {
+    const db = new sqlite3.Database(dbPath, (err) => {
+      if (err) {
+        console.error('getTopRankings: failed to open DB:', err);
+        return reject(err);
+      }
+
+      let sql = `
+        SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, 
+               Overall_Score AS overall_score, Rank AS rank, Score_Breakdown AS score_breakdown
+        FROM suburbs
+        WHERE Overall_Score IS NOT NULL
+      `;
+      const params: any[] = [];
+      if (state) {
+        sql += ` AND State = ?`;
+        params.push(state.toUpperCase());
+      }
+      sql += ` ORDER BY Overall_Score DESC LIMIT ?`;
+      params.push(limit);
+
+      db.all(sql, params, (err, rows: any[]) => {
+        db.close();
+        if (err) {
+            console.error('getTopRankings: query failed:', err);
+            return reject(err);
+        }
+        resolve((rows || []).map(r => ({
+          id: r.ssc,
+          label: `${r.suburb_name}, ${r.state} ${r.postcode}`,
+          suburb_name: r.suburb_name,
+          state: r.state,
+          postcode: r.postcode,
+          overall_score: r.overall_score,
+          rank: r.rank,
+          scoreBreakdown: r.score_breakdown ? JSON.parse(r.score_breakdown) : undefined,
+          ssc: r.ssc
+        } as any)));
+      });
+    });
+  });
+}
