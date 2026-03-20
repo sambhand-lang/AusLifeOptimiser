@@ -11,6 +11,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { calculateSuburbScore, DEFAULT_BENCHMARKS } from '@/utils/suburbScoring';
+import { usePersona } from '@/context/PersonaContext';
+
 
 const AUSTRALIAN_STATES = [
   { value: "all", label: "National (All Australia)" },
@@ -26,28 +29,41 @@ const AUSTRALIAN_STATES = [
 
 export function SuburbRankings() {
    const [searchParams, setSearchParams] = useSearchParams();
-   const [rankings, setRankings] = useState<any[]>([]);
-   const [loading, setLoading] = useState(true);
+    const [rankings, setRankings] = useState<any[]>([]);
+    const { persona } = usePersona();
+    const [loading, setLoading] = useState(true);
+
    const stateFilter = searchParams.get('state') || 'all';
 
    useEffect(() => {
      async function fetchRankings() {
        try {
          setLoading(true);
-         const url = stateFilter !== 'all' 
-            ? `/api/suburbs/rankings?state=${stateFilter}&limit=12` 
-            : '/api/suburbs/rankings?limit=12';
-         const res = await fetch(url);
-         const data = await res.json();
-         setRankings(data.data || []);
-       } catch (err) {
+          const url = stateFilter !== 'all' 
+             ? `/api/suburbs/rankings?state=${stateFilter}&limit=40` 
+             : '/api/suburbs/rankings?limit=40';
+          const res = await fetch(url);
+          const data = await res.json();
+          
+          // Re-calculate scores based on current persona and re-sort
+          const recalculated = (data.data || []).map((s: any) => {
+              // Convert DB structure to what calculateSuburbScore expects if necessary
+              // Actually, calculateSuburbScore handles some fallback fields
+              return calculateSuburbScore(s, DEFAULT_BENCHMARKS, persona);
+          });
+          
+          recalculated.sort((a: any, b: any) => b.overallScore - a.overallScore);
+          setRankings(recalculated.slice(0, 16)); // Show top 16 for better grid
+        } catch (err) {
+
          console.error('Failed to fetch rankings:', err);
        } finally {
          setLoading(false);
        }
      }
      fetchRankings();
-   }, [stateFilter]);
+   }, [stateFilter, persona]);
+
 
    const handleStateChange = (value: string) => {
      if (value === 'all') {
@@ -119,9 +135,11 @@ export function SuburbRankings() {
                               <SuburbScoreCard 
                                  suburbName={suburb.suburb_name}
                                  state={suburb.state}
-                                 overallScore={suburb.overall_score}
+                                 overallScore={suburb.overallScore}
                                  scoreBreakdown={suburb.scoreBreakdown}
-                              />
+                                 rank={suburb.rank}
+                                 totalSuburbs={suburb.total_suburbs}
+                               />
                            </div>
                            <div className="mt-auto bg-gradient-to-r from-emerald-50 to-emerald-100/50 border-t border-emerald-100 p-5 flex items-center justify-between group-hover:bg-emerald-100 transition-colors">
                               <span className="font-semibold text-emerald-800 text-sm flex items-center group-hover:text-emerald-900 transition-colors">

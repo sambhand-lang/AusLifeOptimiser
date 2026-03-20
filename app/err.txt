@@ -1,0 +1,3 @@
+src/pages/CostOfLivingPage.tsx(1,1): error TS6133: 'React' is declared but its value is never read.
+src/pages/SuburbDetail.tsx(10,1): error TS6192: All imports in import declaration are unused.
+src/utils/insightGenerator.ts(1,85): error TS6133: 'state' is declared but its value is never read.

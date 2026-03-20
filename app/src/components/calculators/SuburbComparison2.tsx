@@ -87,11 +87,15 @@ export function SuburbComparison2({
     let display: string;
     if (metricType === 'employmentRate') {
       const percentValue = value < 1 ? value * 100 : value;
-      display = `${percentValue.toFixed(1)}%`;
+      display = `~${percentValue.toFixed(1)}%`;
     } else if (metricType === 'housePrice' || metricType === 'rent' || metricType === 'medianIncome') {
-      display = `$${Math.round(value).toLocaleString()}`;
+      display = `~$${Math.round(value).toLocaleString()}`;
     } else if (metricType === 'growth' || metricType === 'yield') {
-      display = `${value.toFixed(1)}%`;
+      display = `~${value.toFixed(1)}%`;
+    } else if (metricType === 'commute') {
+      display = `~${Math.round(value)} min`;
+    } else if (metricType === 'population') {
+      display = `~${Math.round(value).toLocaleString()}`;
     } else if (value % 1 === 0) {
       display = value.toLocaleString();
     } else {
@@ -121,11 +125,19 @@ export function SuburbComparison2({
   const getRestaurantsMetric = (s: any | null) => s?.realTimeData?.restaurants ?? null;
   const getGymsMetric = (s: any | null) => s?.realTimeData?.gyms ?? null;
 
-  // Real Estate Metrics from Database
   const getMedianHousePriceMetric = (s: any | null) => s?.median_house_price ?? null;
   const getOneYearGrowthMetric = (s: any | null) => s?.one_year_growth ?? null;
-  const getMedianRentMetric = (s: any | null) => s?.median_rent ?? null;
-  const getRentalYieldMetric = (s: any | null) => s?.rental_yield ?? null;
+  const getMedianRentMetric = (s: any | null) => s?.house_rent_weekly ?? s?.median_rent ?? null;
+  const getRentalYieldMetric = (s: any | null) => {
+      if (s) {
+          const price = getMedianHousePriceMetric(s)?.value || getMedianHousePriceMetric(s) || 0;
+          const rent = getMedianRentMetric(s)?.value || getMedianRentMetric(s) || 0;
+          if (price > 0 && rent > 0) {
+              return Number(((rent * 52) / price * 100).toFixed(1));
+          }
+      }
+      return s?.rental_yield ?? null;
+  };
 
   return (
     <TooltipProvider>
@@ -271,7 +283,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-indigo-600" />
-                          Population
+                          Population (ABS Census 2021)
                         </td>
                         {(() => {
                           const a = getPopulationMetric(s1);
@@ -279,9 +291,9 @@ export function SuburbComparison2({
                           const c = s3 ? getPopulationMetric(s3) : null;
                           return (
                             <>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(b)}</td>
-                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c)}</td>}
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'population')}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'population')}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'population')}</td>}
                             </>
                           );
                         })()}
@@ -343,7 +355,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Car className="h-4 w-4 text-blue-600" />
-                          Commute (driving minutes)
+                          Commute to nearest major CBD (est.)
                         </td>
                         {(() => {
                           const a = getCommuteMetric(s1);
@@ -351,9 +363,9 @@ export function SuburbComparison2({
                           const c = s3 ? getCommuteMetric(s3) : null;
                           return (
                             <>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(a)}</td>
-                              <td className="px-6 py-4 text-center">{renderMetricCell(b)}</td>
-                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c)}</td>}
+                              <td className="px-6 py-4 text-center">{renderMetricCell(a, 'commute')}</td>
+                              <td className="px-6 py-4 text-center">{renderMetricCell(b, 'commute')}</td>
+                              {s3 && <td className="px-6 py-4 text-center">{renderMetricCell(c, 'commute')}</td>}
                             </>
                           );
                         })()}
@@ -361,7 +373,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Users className="h-4 w-4 text-indigo-600" />
-                          School Count
+                          Schools (within ~5km radius)
                         </td>
                         {(() => {
                           const a = getSchoolCountMetric(s1);
@@ -379,7 +391,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <TreePine className="h-4 w-4 text-green-600" />
-                          Parks
+                          Public parks & reserves
                         </td>
                         {(() => {
                           const a = getParksMetric(s1);
@@ -415,7 +427,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <TrendingUp className="h-4 w-4 text-cyan-600" />
-                          1 Year Growth
+                          Estimated recent annual price change
                         </td>
                         {(() => {
                           const a = getOneYearGrowthMetric(s1);
@@ -433,7 +445,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <Wallet className="h-4 w-4 text-pink-600" />
-                          Median Rent (Weekly)
+                          Median Rent
                         </td>
                         {(() => {
                           const a = getMedianRentMetric(s1);
@@ -470,7 +482,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <span>☕</span>
-                          Cafes
+                          Cafes (within suburb)
                         </td>
                         {(() => {
                           const a = getCafesMetric(s1);
@@ -488,7 +500,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <span>🍽️</span>
-                          Restaurants
+                          Restaurants (within suburb)
                         </td>
                         {(() => {
                           const a = getRestaurantsMetric(s1);
@@ -506,7 +518,7 @@ export function SuburbComparison2({
                       <tr className="border-b hover:bg-emerald-50">
                         <td className="px-6 py-4 font-semibold text-gray-700 flex items-center gap-2">
                           <span>🏋️</span>
-                          Gyms
+                          Gyms (within suburb)
                         </td>
                         {(() => {
                           const a = getGymsMetric(s1);
@@ -528,22 +540,33 @@ export function SuburbComparison2({
             </Card>
 
             {/* Info */}
-            <div className="bg-emerald-50 border-l-4 border-emerald-600 rounded-lg p-4 mt-6">
-              <div className="flex items-start gap-3">
+            <div className="bg-emerald-50 border-l-4 border-emerald-600 rounded-lg p-5 mt-6">
+              <div className="flex items-start gap-4">
                 <Info className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-1" />
-                <div className="text-sm text-gray-700">
-                  <strong className="text-emerald-900">Data Sources & Accuracy (11 Metrics):</strong>
-                  <div className="mt-2 space-y-2">
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block w-4 h-4 rounded border border-green-300 bg-green-100"></span>
-                      <span><strong>✔ Census:</strong> ABS Census 2021 official data (population, median age, household size, weekly income)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="inline-block w-4 h-4 rounded border border-amber-300 bg-amber-100"></span>
-                      <span><strong>⚠ Estimates:</strong> Real estate data and calculated suburb metrics</span>
-                    </div>
+                <div className="text-sm text-gray-700 space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold text-emerald-900 tracking-wide uppercase">
+                     Data Sources & Compliance Disclaimers
                   </div>
-                  <p className="mt-2 text-xs text-gray-600 italic">Metrics: Population, Age, Household Size, Income, Commute, Schools, Parks, House Price, Growth, Rent, Yield, Cafes, Restaurants, Gyms</p>
+                  <p className="font-semibold text-slate-800">
+                      This information is general in nature and does not constitute financial or investment advice. It does not consider your personal circumstances. Comparisons across different cities should be interpreted with caution due to differing market conditions.
+                  </p>
+                  <p className="text-xs text-slate-700 font-medium">
+                      Metrics are derived from public data sources including ABS and aggregated location datasets. Some figures are estimates and may vary.  
+                  </p>
+                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                     <li className="flex items-start gap-2">
+                         <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-emerald-500 shrink-0"></span>
+                         <span><strong>ABS Census 2021:</strong> Population, Age, Household Size, Income (approximate suburb-level aggregation).</span>
+                     </li>
+                     <li className="flex items-start gap-2">
+                         <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-amber-500 shrink-0"></span>
+                         <span><strong>Real Estate Data:</strong> Prices, Rent, Growth and Yields are approximate modeled estimates based on recent periods. Not a valuation.</span>
+                     </li>
+                     <li className="flex items-start gap-2">
+                         <span className="inline-block w-2 h-2 mt-1.5 rounded-full bg-blue-500 shrink-0"></span>
+                         <span><strong>Amenities:</strong> Commute to nearest major CBD, Parks, and Schools are modeled. Cafe/Restaurant/Gym counts are strictly within suburb boundaries and may vary.</span>
+                     </li>
+                  </ul>
                 </div>
               </div>
             </div>

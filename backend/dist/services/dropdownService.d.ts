@@ -37,6 +37,9 @@ export interface DropdownItem {
     rental_yield: number;
     all_postcodes: string[];
     ssc: string;
+    overall_score?: number;
+    rank?: number;
+    total_suburbs?: number;
     searchText?: string;
 }
 /**
@@ -54,4 +57,9 @@ export declare function getSuburbWithPostcodes(ssc: string): Promise<DropdownIte
     display: string;
     all_postcodes: string[];
 } | null>;
+export declare function getNearbySuburbs(id: string, postcode: string, state: string): Promise<DropdownItem[]>;
+/**
+ * Get top ranked suburbs
+ */
+export declare function getTopRankings(limit?: number, state?: string): Promise<DropdownItem[]>;
 //# sourceMappingURL=dropdownService.d.ts.map

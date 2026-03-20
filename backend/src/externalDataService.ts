@@ -95,10 +95,15 @@ export class ExternalDataService {
     cinemaCount?: number;
     libraryCount?: number;
     sportsFieldCount?: number;
+    medianUnitPrice?: number;
+    housePercentage?: number;
+    unitPercentage?: number;
+    houseRentWeekly?: number;
+    unitRentWeekly?: number;
   }> {
     try {
       const res = await query(
-        'SELECT Population, Median_Age, HH_Size, Median_Income_Weekly, Median_House_Price, One_Year_Growth_Pct, Median_Rent_Weekly, Rental_Yield_Pct, Cafe_Count, Restaurant_Count, Gym_Count, Cinema_Count, Library_Count, Sports_Field_Count FROM suburbs WHERE UPPER(Suburb_Name) = ? AND State = ? LIMIT 1',
+        'SELECT Population, Median_Age, HH_Size, Median_Income_Weekly, Median_House_Price, Median_Unit_Price, House_Percentage, Unit_Percentage, House_Rent_Weekly, Unit_Rent_Weekly, One_Year_Growth_Pct, Median_Rent_Weekly, Rental_Yield_Pct, Cafe_Count, Restaurant_Count, Gym_Count, Cinema_Count, Library_Count, Sports_Field_Count FROM suburbs WHERE UPPER(Suburb_Name) = ? AND State = ? LIMIT 1',
         [suburbName.toUpperCase(), state.toUpperCase()]
       );
       if (res.rows.length === 0) return {};
@@ -118,7 +123,12 @@ export class ExternalDataService {
         gymCount: row.Gym_Count ?? 0,
         cinemaCount: row.Cinema_Count ?? 0,
         libraryCount: row.Library_Count ?? 0,
-        sportsFieldCount: row.Sports_Field_Count ?? 0
+        sportsFieldCount: row.Sports_Field_Count ?? 0,
+        medianUnitPrice: row.Median_Unit_Price ?? undefined,
+        housePercentage: row.House_Percentage ?? undefined,
+        unitPercentage: row.Unit_Percentage ?? undefined,
+        houseRentWeekly: row.House_Rent_Weekly ?? undefined,
+        unitRentWeekly: row.Unit_Rent_Weekly ?? undefined
       };
     } catch (err) {
       console.error('getAbsMetrics error', err);
@@ -266,6 +276,22 @@ export class ExternalDataService {
         datasetYear: 2026,
         type: 'official_dataset'
       };
+    }
+
+    if (absMetrics.medianUnitPrice != null) {
+      (result as any).medianUnitPrice = { value: absMetrics.medianUnitPrice, source: 'Expert Market Selection (Mar 2026)', datasetYear: 2026, type: 'derived_metric' };
+    }
+    if (absMetrics.housePercentage != null) {
+      (result as any).housePercentage = absMetrics.housePercentage;
+    }
+    if (absMetrics.unitPercentage != null) {
+      (result as any).unitPercentage = absMetrics.unitPercentage;
+    }
+    if (absMetrics.houseRentWeekly != null) {
+      (result as any).houseRentWeekly = absMetrics.houseRentWeekly;
+    }
+    if (absMetrics.unitRentWeekly != null) {
+      (result as any).unitRentWeekly = absMetrics.unitRentWeekly;
     }
 
     if (absMetrics.oneYearGrowth != null) {

@@ -57,7 +57,13 @@ export const SuburbScoreCard: React.FC<SuburbScoreCardProps> = ({
         <div className="text-sm text-emerald-400 font-medium">{state}</div>
         {rank && totalSuburbs && (
           <div className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-            Ranked #{rank.toLocaleString()} of {totalSuburbs.toLocaleString()} in Australia
+            {(() => {
+                // Approximate valid suburbs by assuming maybe 8,000 score effectively >0
+                // Use a ceiling bracket of 5 for a cleaner look (Top 5%, Top 10%, Top 15%)
+                 const bracket = Math.max(1, Math.min(100, (rank / totalSuburbs) * 100));
+                 const cleanBracket = Math.max(1, Math.ceil(bracket / 5) * 5);
+                 return `TOP ${cleanBracket}% IN AUSTRALIA`;
+            })()}
           </div>
         )}
       </div>
@@ -77,7 +83,11 @@ export const SuburbScoreCard: React.FC<SuburbScoreCardProps> = ({
                                 <Info className="h-3 w-3 text-slate-300 hover:text-slate-500 transition-colors" />
                             </TooltipTrigger>
                             <TooltipContent side="right" className="bg-slate-800 text-white text-[10px] border-0 rounded-lg shadow-xl">
-                                {breakdownLabels.find(l => l.key === key)?.description}
+                                {key === 'commute' ? (
+                                    value >= 80 ? "Under 20 mins to nearest major employment hub" :
+                                    value >= 50 ? "30-45 mins to nearest major employment hub" :
+                                    "Limited public transport / 45+ mins to major hub"
+                                ) : breakdownLabels.find(l => l.key === key)?.description}
                             </TooltipContent>
                         </Tooltip>
                     </TooltipProvider>

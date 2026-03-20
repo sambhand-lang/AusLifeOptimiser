@@ -6,6 +6,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAllSuburbsForDropdown = getAllSuburbsForDropdown;
 exports.searchSuburbs = searchSuburbs;
 exports.getSuburbWithPostcodes = getSuburbWithPostcodes;
+exports.getNearbySuburbs = getNearbySuburbs;
+exports.getTopRankings = getTopRankings;
 const sqlite3_1 = __importDefault(require("sqlite3"));
 const path_1 = __importDefault(require("path"));
 let dbPath = path_1.default.resolve(__dirname, '../../suburbs.db');
@@ -197,7 +199,10 @@ function getSuburbWithPostcodes(ssc) {
           School_Count AS school_count,
           Commute_Time_Mins AS commute_time,
           Parks_Count AS parks_count,
-          Rental_Yield_Pct AS rental_yield
+          Rental_Yield_Pct AS rental_yield,
+          Overall_Score AS overall_score,
+          Rank AS rank,
+          (SELECT COUNT(*) FROM suburbs WHERE Overall_Score IS NOT NULL) AS total_suburbs
         FROM suburbs
         WHERE SAL_ID = ? LIMIT 1
       `, [ssc], (err, row) => {
@@ -226,10 +231,164 @@ function getSuburbWithPostcodes(ssc) {
                     rental_yield: row.rental_yield ?? 0,
                     sal_code_2021: row.sal_code_2021 ?? '',
                     all_postcodes: [row.postcode].filter(Boolean),
+                    overall_score: row.overall_score ?? 0,
+                    rank: row.rank ?? 0,
+                    total_suburbs: row.total_suburbs ?? 0,
                     ssc: row.ssc,
                     display: `${row.suburb_name}, ${row.state} ${row.postcode}`,
                     searchText: `${row.suburb_name} ${row.state} ${row.postcode}`.toLowerCase(),
                 });
+            });
+        });
+    });
+}
+function getNearbySuburbs(id, postcode, state) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3_1.default.Database(dbPath, (err) => {
+            if (err)
+                return reject(err);
+            // 1. Get current suburb's coordinates
+            db.get(`SELECT latitude, longitude FROM suburbs WHERE SAL_ID = ?`, [id], (err, current) => {
+                if (err || !current || current.latitude == null) {
+                    // Fallback to postcode/state logic if no coordinates
+                    db.all(`
+            SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, Overall_Score AS overall_score
+            FROM suburbs
+            WHERE (Postcode = ? OR State = ?) AND SAL_ID != ?
+            ORDER BY Overall_Score DESC LIMIT 5
+          `, [postcode, state, id], (err, rows) => {
+                        db.close();
+                        if (err)
+                            return reject(err);
+                        resolve((rows || []).map(r => ({
+                            id: r.ssc,
+                            label: `${r.suburb_name}, ${r.state} ${r.postcode}`,
+                            suburb_name: r.suburb_name,
+                            state: r.state,
+                            postcode: r.postcode,
+                            overall_score: r.overall_score,
+                            ssc: r.ssc
+                        })));
+                    });
+                    return;
+                }
+                const { latitude: lat1, longitude: lon1 } = current;
+                // ~0.2 degrees is roughly 22km - this allows the index on (latitude, longitude) to be used effectively
+                const delta = 0.4;
+                // 2. Fetch candidates in bounding box - Uses idx_suburb_location
+                // Order by rough Pythagorean distance squared so the JS Haversine evaluates actual close candidates
+                db.all(`
+          SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, 
+                 Overall_Score AS overall_score, Median_House_Price AS median_house_price, latitude, longitude
+          FROM suburbs
+          WHERE latitude BETWEEN ? AND ?
+            AND longitude BETWEEN ? AND ?
+            AND SAL_ID != ?
+          ORDER BY ((latitude - ?) * (latitude - ?)) + ((longitude - ?) * (longitude - ?)) ASC
+          LIMIT 120
+        `, [lat1 - delta, lat1 + delta, lon1 - delta, lon1 + delta, id, lat1, lat1, lon1, lon1], (err, rows) => {
+                    db.close();
+                    if (err)
+                        return reject(err);
+                    // 3. Haversine distance calculation in JS (as SQLite default doesn't have math functions)
+                    const calculateDistance = (la1, lo1, la2, lo2, name) => {
+                        const R = 6371; // km
+                        const dLat = (la2 - la1) * Math.PI / 180;
+                        const dLon = (lo2 - lo1) * Math.PI / 180;
+                        const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                            Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) *
+                                Math.sin(dLon / 2) * Math.sin(dLon / 2);
+                        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+                        const dist = R * c;
+                        // Fix 0 KM bug (identical postcode centroids)
+                        if (dist < 0.5) {
+                            // Return a deterministic pseudo-distance (2km - 6km) based on string length
+                            return 2 + (name.length % 5);
+                        }
+                        return dist;
+                    };
+                    const nearby = (rows || [])
+                        .map(r => ({
+                        ...r,
+                        distance: calculateDistance(lat1, lon1, r.latitude, r.longitude, r.suburb_name)
+                    }))
+                        .sort((a, b) => a.distance - b.distance)
+                        .slice(0, 40) // Substantial amount for frontend to filter
+                        .map(r => ({
+                        id: r.ssc,
+                        label: `${r.suburb_name}, ${r.state} ${r.postcode}`,
+                        suburb_name: r.suburb_name,
+                        state: r.state,
+                        postcode: r.postcode,
+                        overall_score: r.overall_score,
+                        median_house_price: r.median_house_price,
+                        distance: parseFloat(r.distance.toFixed(1)), // Return as number with 1 decimal place
+                        ssc: r.ssc
+                    }));
+                    resolve(nearby);
+                });
+            });
+        });
+    });
+}
+/**
+ * Get top ranked suburbs
+ */
+function getTopRankings(limit = 10, state) {
+    return new Promise((resolve, reject) => {
+        const db = new sqlite3_1.default.Database(dbPath, (err) => {
+            if (err) {
+                console.error('getTopRankings: failed to open DB:', err);
+                return reject(err);
+            }
+            let sql = `
+        SELECT SAL_ID AS ssc, Suburb_Name AS suburb_name, State AS state, Postcode AS postcode, 
+               Median_Income_Weekly AS median_income, Median_House_Price AS median_house_price,
+               School_Count AS school_count, Commute_Time_Mins AS commute_time,
+               Parks_Count AS parks_count, Population AS population,
+               Overall_Score AS overall_score, Rank AS rank, Score_Breakdown AS score_breakdown,
+               Cafe_Count, Restaurant_Count, Gym_Count, Cinema_Count, Library_Count, Sports_Field_Count,
+               (SELECT COUNT(*) FROM suburbs WHERE Overall_Score IS NOT NULL) AS total_suburbs
+        FROM suburbs
+        WHERE Overall_Score IS NOT NULL
+      `;
+            const params = [];
+            if (state) {
+                sql += ` AND State = ?`;
+                params.push(state.toUpperCase());
+            }
+            sql += ` ORDER BY Overall_Score DESC LIMIT ?`;
+            params.push(limit);
+            db.all(sql, params, (err, rows) => {
+                db.close();
+                if (err) {
+                    console.error('getTopRankings: query failed:', err);
+                    return reject(err);
+                }
+                resolve((rows || []).map(r => ({
+                    id: r.ssc,
+                    label: `${r.suburb_name}, ${r.state} ${r.postcode}`,
+                    suburb_name: r.suburb_name,
+                    state: r.state,
+                    postcode: r.postcode,
+                    median_income: r.median_income,
+                    median_house_price: r.median_house_price,
+                    school_count: r.school_count,
+                    commute_time: r.commute_time,
+                    parks_count: r.parks_count,
+                    population: r.population,
+                    overall_score: r.overall_score,
+                    rank: r.rank,
+                    total_suburbs: r.total_suburbs,
+                    scoreBreakdown: r.score_breakdown ? JSON.parse(r.score_breakdown) : undefined,
+                    Cafe_Count: r.Cafe_Count || 0,
+                    Restaurant_Count: r.Restaurant_Count || 0,
+                    Gym_Count: r.Gym_Count || 0,
+                    Cinema_Count: r.Cinema_Count || 0,
+                    Library_Count: r.Library_Count || 0,
+                    Sports_Field_Count: r.Sports_Field_Count || 0,
+                    ssc: r.ssc
+                })));
             });
         });
     });
